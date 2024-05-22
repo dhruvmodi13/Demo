@@ -1,0 +1,89 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "scaleUnit": {
+            "type": "string",
+            "metadata": {
+                "description": "Describes the scale unit that is to be used to uniquely identify each resource"
+            }
+        },
+        "webappPrefix": {
+            "type": "string",
+            "metadata": {
+                "description": "Prefix for the Web App being deployed"
+            }
+        }
+    },
+    "variables": {
+        "service_Type": "[if(equals(parameters('webappPrefix'), 'salesproductivityservice'), 'core' , 'bot')]",
+        "afd_ServiceTypeSuffix": "[concat(variables('service_Type'),parameters('scaleUnit'))]",
+        "afdProfileName": "[concat('salescopilot-afd',variables('afd_ServiceTypeSuffix'))]",
+        "waf_Name": "[concat('salescopilotwaf',variables('afd_ServiceTypeSuffix'))]"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Cdn/profiles",
+            "apiVersion": "2022-11-01-preview",
+            "name": "[variables('afdProfileName')]",
+            "location": "Global",
+            "sku": {
+                "name": "Premium_AzureFrontDoor"
+            },
+            "kind": "frontdoor",
+            "properties": {
+                "originResponseTimeoutSeconds": 60,
+                "extendedProperties": {}
+            }
+        },
+        {
+            "type": "Microsoft.Network/frontdoorwebapplicationfirewallpolicies",
+            "apiVersion": "2022-05-01",
+            "name": "[variables('waf_Name')]",
+            "location": "Global",
+            "sku": {
+                "name": "Premium_AzureFrontDoor"
+            },
+            "properties": {
+                "policySettings": {
+                    "enabledState": "Enabled",
+                    "mode": "Prevention",
+                    "customBlockResponseStatusCode": 403,
+                    "requestBodyCheck": "Disabled"
+                },
+                "customRules": {
+                    "rules": [
+                        {
+                            "name": "RateLimitRule",
+                            "enabledState": "Enabled",
+                            "priority": 100,
+                            "ruleType": "RateLimitRule",
+                            "rateLimitDurationInMinutes": 5,
+                            "rateLimitThreshold": 100,
+                            "matchConditions": [
+                                {
+                                    "matchVariable": "SocketAddr",
+                                    "operator": "IPMatch",
+                                    "negateCondition": false,
+                                    "matchValue": ["0.0.0.0/0", "::/0"],
+                                    "transforms": []
+                                }
+                            ],
+                            "action": "Block"
+                        }
+                    ]
+                },
+                "managedRules": {
+                    "managedRuleSets": [
+                        {
+                            "ruleSetType": "Microsoft_BotManagerRuleSet",
+                            "ruleSetVersion": "1.0",
+                            "ruleGroupOverrides": [],
+                            "exclusions": []
+                        }
+                    ]
+                }
+            }
+        }
+    ]
+}
