@@ -3,10 +3,12 @@
     "contentVersion": "1.0.0.0",
     "parameters": {
         "scaleUnit": {
-            "value": "afdev2"
+            "value": "extfdev1"
         },
-        "webappPrefix": {
-            "value": "salesproductivityservice"
+        "DefaultCollectionThroughput": {
+            "value": {
+                "Max": 1000
+            }
         }
     }
 }
