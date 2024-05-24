@@ -71,22 +71,6 @@
                     }
                 }
             }
-        },
-        {
-            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/throughputSettings",
-            "apiVersion": "2023-04-15",
-            "name": "[concat(variables('cosmosdatabasename'), '/', variables('shareToTeamsSoftLinkDbName'),'/', variables('shareToTeamsSoftLinkContainerName'), '/default')]",
-            "dependsOn": [
-                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers', variables('cosmosdatabasename'), variables('shareToTeamsSoftLinkDbName'), variables('shareToTeamsSoftLinkContainerName'))]",
-                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', variables('cosmosdatabasename'), variables('shareToTeamsSoftLinkDbName'))]"
-            ],
-            "properties": {
-                "resource": {
-                    "autoscaleSettings": {
-                        "maxThroughput": "[parameters('DefaultCollectionThroughput').Max]"
-                    }
-                }
-            }
         }
     ]
 }
