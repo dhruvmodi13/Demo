@@ -2,7 +2,7 @@
 	"$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
 	"contentVersion": "1.0.0.0",
 	"parameters": {
-		"rbac_NestedDeployment": {
+		"rbac_NestedDeploymentName": {
 			"type": "string",
 			"defaultValue": "[concat('rbac_NestedDeployment', uniqueString(resourceGroup().id, utcNow()))]"
 		},
