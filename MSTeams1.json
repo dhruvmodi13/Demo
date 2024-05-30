@@ -2,28 +2,31 @@
 	"$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
 	"contentVersion": "1.0.0.0",
 	"parameters": {
+		"rbac_NestedDeployment": {
+			"type": "string",
+			"defaultValue": "[concat('rbac_NestedDeployment', uniqueString(resourceGroup().id, utcNow()))]"
+		},
 		"deploymentRGName": {
-      "defaultValue": "MsTeamsTabServiceintcommon",
+			"defaultValue": "MsTeamsTabServiceintcommon",
 			"type": "String"
 		},
-    "sites_msteamstabservice_name": {
+		"sites_msteamstabservice_name": {
 			"defaultValue": "msteamstabserviceinteastasia",
 			"type": "String"
 		},
-    "cosmosDBStorageAccountName": {
-      "defaultValue": "msteamstabcosmosintstorage",
+		"cosmosDBStorageAccountName": {
+			"defaultValue": "msteamstabcosmosintstorage",
 			"type": "string"
 		}
 	},
 	"variables": {
-		"storageTableDataContributor": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', '0a9a7e1f-b9d0-4cc4-a60d-0319b160aaa3')]",
-		"rbac_NestedDeploymentName": "[concat('rbac_NestedDeployment', uniqueString(resourceGroup().id, utcNow()))]"
+		"storageTableDataContributor": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', '0a9a7e1f-b9d0-4cc4-a60d-0319b160aaa3')]"
 	},
 	"resources": [
 		{
 			"type": "Microsoft.Resources/deployments",
 			"apiVersion": "2021-04-01",
-			"name": "[variables('rbac_NestedDeploymentName')]",
+			"name": "[parameters('rbac_NestedDeploymentName')]",
 			"subscriptionId": "[subscription().subscriptionId]",
 			"resourceGroup": "[parameters('deploymentRGName')]",
 			"properties": {
