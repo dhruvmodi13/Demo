@@ -247,7 +247,7 @@
                     "outputs": {
                         "updatedIpList": {
                             "type": "string",
-                            "value": "[reference(variables('ipUpdateCosmosDBScriptId'), '2020-10-01').outputs.ipAddress.value]"
+                            "value": "[reference(variables('ipUpdateCosmosDBScriptId'), '2020-10-01').outputs.ipAddress]"
                         }
                     }
                 }
