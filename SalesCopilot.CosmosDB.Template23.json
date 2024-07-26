@@ -254,7 +254,7 @@
                             "copy": {
                                 "count": "[length(split(reference(variables('ipUpdateCosmosDBScriptId'), '2020-10-01').outputs.ipAddress, ','))]",
                                 "input": {
-                                    "ipAddressOrRange": "[split(reference(variables('ipUpdateCosmosDBScriptId'), '2020-10-01').outputs.ipAddress, ',')[copyIndex('ipRules')]]"
+                                    "ipAddressOrRange": "[split(reference(variables('ipUpdateCosmosDBScriptId'), '2020-10-01').outputs.ipAddress, ',')[copyIndex()]]"
                                 }
                             }
                         }
