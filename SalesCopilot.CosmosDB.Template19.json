@@ -191,7 +191,7 @@
                 "locations": "[union(createArray(createObject('locationName', parameters('cosmosreadwritelocation'), 'failoverPriority', 0, 'isZoneRedundant', parameters('hpaSupportAvailableCosmosWriteRegion'))), if(parameters('hasCosmosBCDRRegion'), createArray(createObject('locationName', parameters('cosmosSecondarylocation'), 'failoverPriority', 1, 'isZoneRedundant', parameters('hpaSupportAvailableCosmosReadRegion'))), createArray()))]",
                 "cors": [],
                 "capabilities": [],
-                "ipRules": "[createArray(for ipAddress in split(reference(parameters('cosmos_NestedDeploymentName'), '2021-04-01').outputs.updatedIpList.value, ',')): createObject('ipAddressOrRange', ipAddress))]",
+                "ipRules": "[createArray(for(ipAddress in split(reference(parameters('cosmos_NestedDeploymentName'), '2021-04-01').outputs.updatedIpList.value, ',')): createObject('ipAddressOrRange', ipAddress))]",
                 "backupPolicy": {
                     "type": "Continuous",
                     "continuousModeProperties": {
