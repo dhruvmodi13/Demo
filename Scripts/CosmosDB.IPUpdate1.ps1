@@ -6,22 +6,22 @@ param(
     [string] $AccountName,
 
     [Parameter(Mandatory = $true)]
-    [string] $NewIpRanges  # Comma-separated string of new IP ranges
+    [string] $NewIpRanges
 )
 
-# Split the comma-separated string of new IP ranges into an array
+
 $NewIpRangesArray = $NewIpRanges -split ","
 
 # Retrieve all Cosmos DB accounts in the specified resource group
-$cosmosObjs = Get-AzCosmosDBAccount -ResourceGroupName $ResourceGroupName
+$cosmosObjs = Get-AzCosmosDBAccount -ResourceGroupName $resourceGroupName
 
 # Check if the specific Cosmos DB account is present
 $accountExists = $cosmosObjs | Where-Object { $_.Name -eq $AccountName }
 
-# Proceed if the account exists
+
+# Output based on the existence of the account
 if ($accountExists) {
     $cosmosObj = $accountExists;
-
     # Check if IpRules is null or empty and initialize an empty array if true
     if ($null -eq $cosmosObj.IpRules -or $cosmosObj.IpRules.Count -eq 0) {
         $currentIpRangesArray = @()
@@ -47,17 +47,34 @@ if ($accountExists) {
             Write-Output "IP range $newIpRange already exists in Cosmos DB account $AccountName"
         }
     }
+
+    # Check if changes were made and update the Cosmos DB account
+    if ($changesMade) {
+        # Update the Cosmos DB account with the new IP rules
+        $cosmosObj = Get-AzCosmosDBAccount -Name $AccountName -ResourceGroupName $ResourceGroupName
+        if ($cosmosObj.ProvisioningState -ne "Updating") {
+            ##Update-AzCosmosDBAccount -Name $AccountName -ResourceGroupName $ResourceGroupName -IpRule $updatedIpRangesArray
+            Write-Output "Updated IP ranges for Cosmos DB account $AccountName"
+        }
+        else {
+            Write-Output "There is already an operation in progress which requires exclusive lock on this Cosmos: $AccountName . Please retry the operation after sometime"
+        }
+    }
+    else {
+        Write-Output "No new IP ranges added; no update necessary."
+    }
 }
 else {
-    # If the account doesn't exist, initialize the updated IP array with the input IP ranges
+
     $updatedIpRangesArray = $NewIpRangesArray.Clone()
-    Write-Output "Account $AccountName does not exist in the resource group $ResourceGroupName."
+}
+$ipObjectsArray = $updatedIpRangesArray | ForEach-Object {
+    # Create a custom object for each IP address
+    [PSCustomObject]@{
+        ipAddressOrRange = $_
+    }
 }
 
-# Convert the final list of IP ranges into a comma-separated string
-$updatedIpRangesString = $updatedIpRangesArray -join ","
-$DeploymentScriptOutputs = @{}
-$DeploymentScriptOutputs['ipAddress'] = $updatedIpRangesString
 
-# Output final IP ranges for use in subsequent steps or deployments
-Write-Output "Final IP Ranges: $updatedIpRangesString"
+$DeploymentScriptOutputs = @{}
+$DeploymentScriptOutputs['ipAddress'] = $ipObjectsArray
