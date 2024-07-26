@@ -188,17 +188,6 @@
                 "locations": "[union(createArray(createObject('locationName', parameters('cosmosreadwritelocation'), 'failoverPriority', 0, 'isZoneRedundant', parameters('hpaSupportAvailableCosmosWriteRegion'))), if(parameters('hasCosmosBCDRRegion'), createArray(createObject('locationName', parameters('cosmosSecondarylocation'), 'failoverPriority', 1, 'isZoneRedundant', parameters('hpaSupportAvailableCosmosReadRegion'))), createArray()))]",
                 "cors": [],
                 "capabilities": [],
-                "ipRules": {
-            "copy": [
-                {
-                    "name": "ipRules",
-                    "count": "[length(split(reference(parameters('cosmos_NestedDeploymentName')).outputs.updatedIpList.value, ','))]",
-                    "input": {
-                        "ipAddressOrRange": "[split(reference(parameters('cosmos_NestedDeploymentName')).outputs.updatedIpList.value, ',')[copyIndex('ipRules')]]"
-                    }
-                }
-            ]
-        },
                 "backupPolicy": {
                     "type": "Continuous",
                     "continuousModeProperties": {
