@@ -66,9 +66,6 @@
         "isDatabaseCreationEnabled": {
             "value": true
         },
-        "useDedicatedHPAResourceGroupForCompute": {
-            "value": true
-        },
         "vnet": {
             "value": "vnet-salesproductivityafdev2"
         }
