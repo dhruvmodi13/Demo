@@ -32,9 +32,6 @@
         "ev2ScriptUrl": {
             "value": "https://raw.githubusercontent.com/dhruvmodi13/Demo/main/Scripts/"
         },
-        "ev2TemplateSAS": {
-            "value": null
-        },
         "hasCosmosBCDRRegion": {
             "value": false
         },
