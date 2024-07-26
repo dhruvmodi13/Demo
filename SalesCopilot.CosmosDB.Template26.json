@@ -195,7 +195,7 @@
                         "name": "ipRules",
                         "count": 3,
                         "input": {
-                            "ipAddressOrRange": "[format('0.0.0.{0}', copyIndex())]"
+                            "ipAddressOrRange": "[format('0.0.0.{0}', copyIndex('ipRules'))]"
                         }
                     }
                 ],
