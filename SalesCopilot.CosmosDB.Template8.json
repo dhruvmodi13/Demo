@@ -191,9 +191,9 @@
             "copy": [
                 {
                     "name": "ipRules",
-                    "count": "[length(split(reference(variables('ipUpdateCosmosDB'), '2020-10-01', 'Full').outputs.ipAddress.value, ','))]",
+                    "count": "[length(split(reference(variables('ipUpdateCosmosDB')).outputs.ipAddress.value, ','))]",
                     "input": {
-                        "ipAddressOrRange": "[split(reference(variables('ipUpdateCosmosDB'), '2020-10-01', 'Full').outputs.ipAddress.value, ',')[copyIndex('ipRules')]]"
+                        "ipAddressOrRange": "[split(reference(variables('ipUpdateCosmosDB')).outputs.ipAddress.value, ',')[copyIndex('ipRules')]]"
                     }
                 }
             ]
