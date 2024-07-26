@@ -255,7 +255,7 @@
                     ],
                     "outputs": {
                         "updatedIpList": {
-                            "type": "string",
+                            "type": "array",
                             "value": "[reference(variables('ipUpdateCosmosDBScriptId'), '2020-10-01').outputs.ipAddress]"
                         }
                 }
