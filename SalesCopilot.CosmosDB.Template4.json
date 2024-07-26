@@ -124,7 +124,7 @@
         "migrateCosmosContainersAutoScaleScriptId": "[resourceId('Microsoft.Resources/deploymentScripts',variables('migrateCosmosContainersAutoScale'))]",
         "ipUpdateCosmosDB": "[concat('ipUpdateCosmosDB', resourceGroup().location)]",
         "ipUpdateCosmosDBScriptId": "[resourceId('Microsoft.Resources/deploymentScripts',variables('ipUpdateCosmosDB'))]",
-        "ipUpdateCosmosDBScriptUri": "[concat(parameters('Ev2ScriptUrl'),'CosmosDB.IPUpdate.ps1')]",
+        "ipUpdateCosmosDBScriptUri": "[concat(parameters('Ev2ScriptUrl'),'CosmosDB.IPUpdate1.ps1')]",
         "deploymentScriptsUpdateTag": "[guid(uniqueString('CosmosDB.AutoScale.Migrate', parameters('scaleUnit'), subscription().subscriptionId, '1'))]",
         "deploymentScriptsUpdateTag1": "[guid(uniqueString('CosmosDB.IPUpdate', parameters('scaleUnit'), subscription().subscriptionId, '1'))]",
         "vnetName": "[concat(parameters('vnet'),parameters('scaleUnit'))]",
@@ -137,70 +137,15 @@
             "13.106.4.96/27",
             "167.220.249.128/26",
             "104.42.195.92"
-        ]
+        ],
+        "staticIpAddressesString": "[join(variables('staticIpAddresses'), ',')]"
     },
     "resources": [
-        {
-            "type": "Microsoft.DocumentDB/databaseAccounts",
-            "apiVersion": "2021-10-15",
-            "name": "[variables('cosmosdatabasename')]",
-            "location": "[variables('location')]",
-            "condition": "[parameters('isDatabaseCreationEnabled')]",
-            "tags": {
-                "defaultExperience": "Core (SQL)",
-                "hidden-cosmos-mmspecial": "",
-                "ResourceOwnerAlias": "skapila"
-            },
-            "kind": "GlobalDocumentDB",
-            "identity": {
-                "type": "None"
-            },
-            "properties": {
-                "publicNetworkAccess": "Enabled",
-                "enableAutomaticFailover": false,
-                "enableMultipleWriteLocations": false,
-                "isVirtualNetworkFilterEnabled": true,
-                "virtualNetworkRules": [
-                    {
-                        "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('vnetName'), 'default')]",
-                        "ignoreMissingVNetServiceEndpoint": false
-                    }
-                ],
-                "disableKeyBasedMetadataWriteAccess": false,
-                "enableFreeTier": false,
-                "enableAnalyticalStorage": false,
-                "analyticalStorageConfiguration": {
-                    "schemaType": "WellDefined"
-                },
-                "databaseAccountOfferType": "Standard",
-                "defaultIdentity": "FirstPartyIdentity",
-                "networkAclBypass": "None",
-                "disableLocalAuth": true,
-                "consistencyPolicy": {
-                    "defaultConsistencyLevel": "Strong",
-                    "maxIntervalInSeconds": 5,
-                    "maxStalenessPrefix": 100
-                },
-                "locations": "[union(createArray(createObject('locationName', parameters('cosmosreadwritelocation'), 'failoverPriority', 0, 'isZoneRedundant', parameters('hpaSupportAvailableCosmosWriteRegion'))), if(parameters('hasCosmosBCDRRegion'), createArray(createObject('locationName', parameters('cosmosSecondarylocation'), 'failoverPriority', 1, 'isZoneRedundant', parameters('hpaSupportAvailableCosmosReadRegion'))), createArray()))]",
-                "cors": [],
-                "capabilities": [],
-                "backupPolicy": {
-                    "type": "Continuous",
-                    "continuousModeProperties": {
-                        "tier": "Continuous30Days"
-                    }
-                },
-                "networkAclBypassResourceIds": []
-            }
-        },
         {
             "type": "Microsoft.Resources/deploymentScripts",
             "apiVersion": "2020-10-01",
             "name": "[variables('ipUpdateCosmosDB')]",
             "location": "[resourceGroup().location]",
-            "dependsOn": [
-                "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosdatabasename'))]"
-            ],
             "identity": {
                 "type": "UserAssigned",
                 "userAssignedIdentities": {
@@ -216,7 +161,7 @@
                     concat(
                       '-ResourceGroupName ', resourceGroup().name,' ',
                       '-AccountName ',variables('cosmosdatabasename'),' ',
-                      '-NewIpRanges ', replace(string(variables('staticIpAddresses')), '\"', '\\\"'),' '
+                      '-NewIpRanges ', variables('staticIpAddressesString'),' '
                       )
                       ]",
             "primaryScriptUri": "[variables('ipUpdateCosmosDBScriptUri')]",
