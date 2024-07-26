@@ -147,9 +147,6 @@
             "name": "[variables('cosmosdatabasename')]",
             "location": "[variables('location')]",
             "condition": "[parameters('isDatabaseCreationEnabled')]",
-            "dependsOn": [
-            "[variables('ipUpdateCosmosDBScriptId')]"
-            ],
             "tags": {
                 "defaultExperience": "Core (SQL)",
                 "hidden-cosmos-mmspecial": ""
@@ -191,9 +188,9 @@
             "copy": [
                 {
                     "name": "ipRules",
-                    "count": "[length(split(reference(variables('ipUpdateCosmosDB')).outputs.ipAddress.value, ','))]",
+                    "count": "[length(split(reference(parameters('cosmos_NestedDeploymentName')).outputs.updatedIpList.value, ','))]",
                     "input": {
-                        "ipAddressOrRange": "[split(reference(variables('ipUpdateCosmosDB')).outputs.ipAddress.value, ',')[copyIndex('ipRules')]]"
+                        "ipAddressOrRange": "[split(reference(parameters('cosmos_NestedDeploymentName')).outputs.updatedIpList.value, ',')[copyIndex('ipRules')]]"
                     }
                 }
             ]
@@ -208,31 +205,56 @@
             }
         },
         {
-            "type": "Microsoft.Resources/deploymentScripts",
-            "apiVersion": "2020-10-01",
-            "name": "[variables('ipUpdateCosmosDB')]",
-            "location": "[resourceGroup().location]",
-            "identity": {
-                "type": "UserAssigned",
-                "userAssignedIdentities": {
-                    "[variables('identityId')]": {}
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2021-04-01",
+            "name": "[parameters('cosmos_NestedDeploymentName')]",
+            "subscriptionId": "[subscription().subscriptionId]",
+            "resourceGroup": "[resourceGroup().name]",
+            "properties":{
+                "mode": "Incremental",
+                "template":
+                {
+                    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+                    "contentVersion": "1.0.0.0",
+                    "parameters": {},
+                    "variables": {},
+                    "resources": [
+                        {
+                            "type": "Microsoft.Resources/deploymentScripts",
+                            "apiVersion": "2020-10-01",
+                            "name": "[variables('ipUpdateCosmosDB')]",
+                            "location": "[resourceGroup().location]",
+                            "identity": {
+                                "type": "UserAssigned",
+                                "userAssignedIdentities": {
+                                    "[variables('identityId')]": {}
+                                }
+                            },
+                            "kind": "AzurePowerShell",
+                            "properties": {
+                                "forceUpdateTag": "[variables('deploymentScriptsUpdateTag1')]",
+                                "azPowerShellVersion": "8.3",
+                                "timeout": "PT30M",
+                                "arguments": "[
+                                    concat(
+                                      '-ResourceGroupName ', resourceGroup().name,' ',
+                                      '-AccountName ',variables('cosmosdatabasename'),' ',
+                                      '-NewIpRanges ', '\\\"' ,replace(variables('staticIpAddressesString'), '\"', '\\\"'),'\\\"'
+                                      )
+                                      ]",
+                            "primaryScriptUri": "[variables('ipUpdateCosmosDBScriptUri')]",
+                            "cleanupPreference": "[parameters('DeploymentScriptsCleanupPreference')]",
+                            "retentionInterval": "P1D"
+                            }
+                        }
+                    ],
+                    "outputs": {
+                        "updatedIpList": {
+                            "type": "string",
+                            "value": "[reference(parameters('cosmos_NestedDeploymentName')).outputs.ipAddress.value]"
+                        }
+                    }
                 }
-            },
-            "kind": "AzurePowerShell",
-            "properties": {
-                "forceUpdateTag": "[variables('deploymentScriptsUpdateTag1')]",
-                "azPowerShellVersion": "8.3",
-                "timeout": "PT30M",
-                "arguments": "[
-                    concat(
-                      '-ResourceGroupName ', resourceGroup().name,' ',
-                      '-AccountName ',variables('cosmosdatabasename'),' ',
-                      '-NewIpRanges ', '\\\"' ,replace(variables('staticIpAddressesString'), '\"', '\\\"'),'\\\"'
-                      )
-                      ]",
-            "primaryScriptUri": "[variables('ipUpdateCosmosDBScriptUri')]",
-            "cleanupPreference": "[parameters('DeploymentScriptsCleanupPreference')]",
-            "retentionInterval": "P1D"
             }
         }
 ]
