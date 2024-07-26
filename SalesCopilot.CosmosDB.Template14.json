@@ -247,7 +247,7 @@
                     "outputs": {
                         "updatedIpList": {
                             "type": "string",
-                            "value": "[reference(parameters('cosmos_NestedDeploymentName')).outputs.ipAddress.value]"
+                            "value": "[reference(variables('ipUpdateCosmosDBScriptId')).outputs.ipAddress.value]"
                         }
                     }
                 }
