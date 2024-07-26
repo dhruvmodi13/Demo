@@ -1,0 +1,1151 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "backupStorageRedundancy": {
+            "defaultValue": "Geo",
+            "type": "string"
+        },
+        "CollabSpacesCollectionThroughput": {
+            "type": "object"
+        },
+        "ConnectionInfoCollectionThroughput": {
+            "type": "object"
+        },
+        "cosmosreadwritelocation": {
+            "type": "string",
+            "metadata": {
+                "description": "Cosmos Read/Write Location"
+            }
+        },
+        "cosmosSecondarylocation": {
+            "type": "string"
+        },
+        "DefaultCollectionThroughput": {
+            "type": "object"
+        },
+        "DeploymentScriptsCleanupPreference": {
+            "type": "string",
+            "defaultValue": "OnSuccess",
+            "metadata": {
+                "description": "Value when to delete the Deployment Scripts artifacts"
+            }
+        },
+        "Ev2ScriptUrl": {
+            "type": "string"
+        },
+        "Ev2TemplateSAS": {
+            "type": "securestring"
+        },
+        "hasCosmosBCDRRegion": {
+            "type": "bool"
+        },
+        "NotificationCollectionThroughput": {
+            "type": "object"
+        },
+        "scaleUnit": {
+            "type": "string",
+            "metadata": {
+                "description": "Describes the scale unit that is to be used to uniquely identify each resource"
+            }
+        },
+        "TenantSettingsCollectionThroughput": {
+            "type": "object",
+            "defaultValue": {
+                "Max": 4000
+            }
+        },
+        "hpaSupportAvailableVnet": {
+            "type": "bool",
+            "metadata": {
+                "description": "Specify if Hyper Availability support is available in VNet for this Region"
+            }
+        },
+        "preserveOldIp": {
+            "type": "bool",
+            "metadata": {
+                "description": "Specify if old ip should be preserved (only applicable when hpaSupportAvailableVnet is true)"
+            }
+        },
+        "hpaSupportAvailableCosmosWriteRegion": {
+            "type": "bool",
+            "metadata": {
+                "description": "Specify if Hyper Availability support is available in CosmosDb for this Write region"
+            }
+        },
+        "hpaSupportAvailableCosmosReadRegion": {
+            "type": "bool",
+            "metadata": {
+                "description": "Specify if Hyper Availability support is available in CosmosDb for this Read region"
+            }
+        },
+        "isDatabaseCreationEnabled": {
+            "type": "bool",
+            "metadata": {
+                "description": "Specify if the database creation is enabled"
+            }
+        },
+        "vnet": {
+            "defaultValue": "vnet-salesproductivity",
+            "type": "string"
+        }
+    },
+    "variables": {
+        "hpaSuffix": "[if(parameters('hpaSupportAvailableVnet'), 'hpa', '')]",
+        "location": "[resourceGroup().location]",
+        "spWebAppPrefix": "salesproductivityservice",
+        "spWebAppName": "[concat(variables('spWebAppPrefix'),parameters('scaleUnit'))]",
+        "identityResourceId": "[concat(resourceId('Microsoft.Web/sites', variables('spWebAppName')),'/providers/Microsoft.ManagedIdentity/Identities/default')]",
+        "cosmosdb": "cosmosdatabase",
+        "cosmosdatabasename": "[concat(variables('cosmosdb'),parameters('scaleUnit'))]",
+        "tenantInfoDB": "VivaSalesTenantInfoDb",
+        "publicIpAddressNameBase": "NAT-IP-SPPublicIPAddress",
+        "publicIPAddressName": "[concat(variables('publicIpAddressNameBase'),parameters('scaleUnit'),variables('hpaSuffix'))]",
+        "publicIPAddressNameOld": "[concat(variables('publicIpAddressNameBase'),parameters('scaleUnit'))]",
+        "documentDbContributorRoleDefinitionId": "00000000-0000-0000-0000-000000000002",
+        "documentDbRoleAssignmentId": "4e9ef385-ba96-48be-8398-47ff269f8c03",
+        "connectionInfoDbName": "VivaSalesConnectionInfoDb",
+        "connectionInfoContainerName": "ConnectionInfo",
+        "licenseBackfillDbName": "VivaSalesLicenseBackfillInfoDb",
+        "tenantLicensesBackfillContainerName": "TenantsLicenses",
+        "userLicensesBackfillContainerName": "UsersLicenses",
+        "autoInstallDbName": "AutoInstallDb",
+        "autoInstallStatusContainerName": "AutoInstallStatus",
+        "installDbName": "InstallDb",
+        "installStatusContainerName": "InstallStatus",
+        "notificationDbName": "NotificationDb",
+        "notificationContainerName": "Notification",
+        "salesCopilotTenantSettingsDbName": "SalesCopilotTenantSettingsDb",
+        "salesCopilotTenantSettingsContainerName": "TenantSettings",
+        "collabSpacesDbName": "CollabSpacesDb",
+        "collabSpacesContainerName": "CollabSpaces",
+        "shareToTeamsSoftLinkDbName": "ShareToTeamsSoftLinkDb",
+        "shareToTeamsSoftLinkContainerName": "ShareToTeamsSoftLink",
+        "identityName": "[concat('depUserIdentity', parameters('scaleUnit'))]",
+        "identityId": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('identityName'))]",
+        "migrateCosmosContainersAutoScale": "[concat('MigrateCosmosContainersAutoScale', resourceGroup().location)]",
+        "migrateCosmosContainersAutoScaleScriptId": "[resourceId('Microsoft.Resources/deploymentScripts',variables('migrateCosmosContainersAutoScale'))]",
+        "migrateCosmosContainersAutoScaleScriptUri": "[concat(parameters('Ev2ScriptUrl'),'CosmosDB.AutoScale.Migrate.ps1',parameters('Ev2TemplateSAS'))]",
+        "ipUpdateCosmosDB": "[concat('ipUpdateCosmosDB', resourceGroup().location)]",
+        "ipUpdateCosmosDBScriptId": "[resourceId('Microsoft.Resources/deploymentScripts',variables('ipUpdateCosmosDB'))]",
+        "ipUpdateCosmosDBScriptUri": "[concat(parameters('Ev2ScriptUrl'),'CosmosDB.IPUpdate.ps1',parameters('Ev2TemplateSAS'))]",
+        "deploymentScriptsUpdateTag": "[guid(uniqueString('CosmosDB.AutoScale.Migrate', parameters('scaleUnit'), subscription().subscriptionId, '1'))]",
+        "deploymentScriptsUpdateTag1": "[guid(uniqueString('CosmosDB.IPUpdate', parameters('scaleUnit'), subscription().subscriptionId, '1'))]",
+        "vnetName": "[concat(parameters('vnet'),parameters('scaleUnit'))]",
+        "staticIpAddresses": [
+            "207.68.190.32/27",
+            "157.58.216.64/26",
+            "13.106.78.32/27",
+            "13.106.174.32/27",
+            "194.69.119.64/26",
+            "13.106.4.96/27",
+            "167.220.249.128/26",
+            "104.42.195.92"
+        ]
+    },
+    "resources": [
+        {
+            "type": "Microsoft.DocumentDB/databaseAccounts",
+            "apiVersion": "2021-10-15",
+            "name": "[variables('cosmosdatabasename')]",
+            "location": "[variables('location')]",
+            "condition": "[parameters('isDatabaseCreationEnabled')]",
+            "tags": {
+                "defaultExperience": "Core (SQL)",
+                "hidden-cosmos-mmspecial": "",
+                "ResourceOwnerAlias": "skapila"
+            },
+            "kind": "GlobalDocumentDB",
+            "identity": {
+                "type": "None"
+            },
+            "properties": {
+                "publicNetworkAccess": "Enabled",
+                "enableAutomaticFailover": false,
+                "enableMultipleWriteLocations": false,
+                "isVirtualNetworkFilterEnabled": false,
+                "virtualNetworkRules": [
+                    {
+                        "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('vnetName'), 'default')]",
+                        "ignoreMissingVNetServiceEndpoint": false
+                    }
+                ],
+                "disableKeyBasedMetadataWriteAccess": false,
+                "enableFreeTier": false,
+                "enableAnalyticalStorage": false,
+                "analyticalStorageConfiguration": {
+                    "schemaType": "WellDefined"
+                },
+                "databaseAccountOfferType": "Standard",
+                "defaultIdentity": "FirstPartyIdentity",
+                "networkAclBypass": "None",
+                "disableLocalAuth": true,
+                "consistencyPolicy": {
+                    "defaultConsistencyLevel": "Strong",
+                    "maxIntervalInSeconds": 5,
+                    "maxStalenessPrefix": 100
+                },
+                "locations": "[union(createArray(createObject('locationName', parameters('cosmosreadwritelocation'), 'failoverPriority', 0, 'isZoneRedundant', parameters('hpaSupportAvailableCosmosWriteRegion'))), if(parameters('hasCosmosBCDRRegion'), createArray(createObject('locationName', parameters('cosmosSecondarylocation'), 'failoverPriority', 1, 'isZoneRedundant', parameters('hpaSupportAvailableCosmosReadRegion'))), createArray()))]",
+                "cors": [],
+                "capabilities": [],
+                "backupPolicy": {
+                    "type": "Continuous",
+                    "continuousModeProperties": {
+                        "tier": "Continuous30Days"
+                    }
+                },
+                "networkAclBypassResourceIds": []
+            }
+        },
+        {
+            "type": "Microsoft.Resources/deploymentScripts",
+            "apiVersion": "2020-10-01",
+            "name": "[variables('ipUpdateCosmosDB')]",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosdatabasename'))]"
+            ],
+            "identity": {
+                "type": "UserAssigned",
+                "userAssignedIdentities": {
+                    "[variables('identityId')]": {}
+                }
+            },
+            "kind": "AzurePowerShell",
+            "properties": {
+                "forceUpdateTag": "[variables('deploymentScriptsUpdateTag1')]",
+                "azPowerShellVersion": "8.3",
+                "timeout": "PT30M",
+                "arguments": "[
+                    concat(
+                      '-ResourceGroupName ', resourceGroup().name,' ',
+                      '-AccountName ',variables('cosmosdatabasename'),' ',
+                      '-NewIpRanges ',variables('staticIpAddresses'),' '
+                      )
+                      ]",
+            "primaryScriptUri": "[variables('ipUpdateCosmosDBScriptUri')]",
+            "cleanupPreference": "[parameters('DeploymentScriptsCleanupPreference')]",
+            "retentionInterval": "P1D"
+            }
+        },
+        {
+        "type": "Microsoft.Resources/deploymentScripts",
+        "apiVersion": "2020-10-01",
+        "name": "[variables('migrateCosmosContainersAutoScale')]",
+        "location": "[resourceGroup().location]",
+        "dependsOn": [
+            "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosdatabasename'))]",
+            "[variables('ipUpdateCosmosDBScriptId')]"
+        ],
+        "identity": {
+            "type": "UserAssigned",
+            "userAssignedIdentities": {
+                "[variables('identityId')]": {}
+            }
+        },
+        "kind": "AzurePowerShell",
+        "properties": {
+            "forceUpdateTag": "[variables('deploymentScriptsUpdateTag')]",
+            "azPowerShellVersion": "8.3",
+            "timeout": "PT30M",
+            "arguments": "[
+                    concat(
+                      '-ResourceGroupName ', resourceGroup().name,' ',
+                      '-AccountName ',variables('cosmosdatabasename'),' '
+                      )
+                      ]",
+        "primaryScriptUri": "[variables('migrateCosmosContainersAutoScaleScriptUri')]",
+        "cleanupPreference": "[parameters('DeploymentScriptsCleanupPreference')]",
+        "retentionInterval": "P1D"
+    }
+},
+{
+    "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
+    "apiVersion": "2021-10-15",
+    "name": "[concat(variables('cosmosdatabasename'), '/ProvisioningRequests')]",
+    "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosdatabasename'))]",
+        "[variables('migrateCosmosContainersAutoScaleScriptId')]"
+    ],
+    "properties": {
+        "resource": {
+            "id": "ProvisioningRequests"
+        }
+    }
+},
+{
+    "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
+    "apiVersion": "2021-10-15",
+    "name": "[concat(variables('cosmosdatabasename'), '/', variables('tenantInfoDB'))]",
+    "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosdatabasename'))]",
+        "[variables('migrateCosmosContainersAutoScaleScriptId')]"
+    ],
+    "properties": {
+        "resource": {
+            "id": "[variables('tenantInfoDB')]"
+        }
+    }
+},
+{
+    "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
+    "apiVersion": "2021-10-15",
+    "name": "[concat(variables('cosmosdatabasename'), '/VivaSalesConnectionInfoDb')]",
+    "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosdatabasename'))]",
+        "[variables('migrateCosmosContainersAutoScaleScriptId')]"
+    ],
+    "properties": {
+        "resource": {
+            "id": "VivaSalesConnectionInfoDb"
+        }
+    }
+},
+{
+    "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
+    "apiVersion": "2021-10-15",
+    "name": "[concat(variables('cosmosdatabasename'), '/', variables('licenseBackfillDbName'))]",
+    "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosdatabasename'))]",
+        "[variables('migrateCosmosContainersAutoScaleScriptId')]"
+    ],
+    "properties": {
+        "resource": {
+            "id": "[variables('licenseBackfillDbName')]"
+        }
+    }
+},
+{
+    "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
+    "apiVersion": "2021-10-15",
+    "name": "[concat(variables('cosmosdatabasename'), '/', variables('notificationDbName'))]",
+    "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosdatabasename'))]",
+        "[variables('migrateCosmosContainersAutoScaleScriptId')]"
+    ],
+    "properties": {
+        "resource": {
+            "id": "[variables('notificationDbName')]"
+        }
+    }
+},
+{
+    "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
+    "apiVersion": "2021-10-15",
+    "name": "[concat(variables('cosmosdatabasename'), '/', variables('autoInstallDbName'))]",
+    "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosdatabasename'))]",
+        "[variables('migrateCosmosContainersAutoScaleScriptId')]"
+    ],
+    "properties": {
+        "resource": {
+            "id": "[variables('autoInstallDbName')]"
+        }
+    }
+},
+{
+    "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
+    "apiVersion": "2021-10-15",
+    "name": "[concat(variables('cosmosdatabasename'), '/', variables('installDbName'))]",
+    "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosdatabasename'))]",
+        "[variables('migrateCosmosContainersAutoScaleScriptId')]"
+    ],
+    "properties": {
+        "resource": {
+            "id": "[variables('installDbName')]"
+        }
+    }
+},
+{
+    "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
+    "apiVersion": "2021-10-15",
+    "name": "[concat(variables('cosmosdatabasename'), '/', variables('salesCopilotTenantSettingsDbName'))]",
+    "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosdatabasename'))]",
+        "[variables('migrateCosmosContainersAutoScaleScriptId')]"
+    ],
+    "properties": {
+        "resource": {
+            "id": "[variables('salesCopilotTenantSettingsDbName')]"
+        }
+    }
+},
+{
+    "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
+    "apiVersion": "2021-10-15",
+    "name": "[concat(variables('cosmosdatabasename'), '/', variables('collabSpacesDbName'))]",
+    "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosdatabasename'))]",
+        "[variables('migrateCosmosContainersAutoScaleScriptId')]"
+    ],
+    "properties": {
+        "resource": {
+            "id": "[variables('collabSpacesDbName')]"
+        }
+    }
+},
+{
+    "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
+    "apiVersion": "2021-10-15",
+    "name": "[concat(variables('cosmosdatabasename'), '/', variables('shareToTeamsSoftLinkDbName'))]",
+    "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosdatabasename'))]",
+        "[variables('migrateCosmosContainersAutoScaleScriptId')]"
+    ],
+    "properties": {
+        "options": {
+            "autoscaleSettings": {
+                "maxThroughput": "[parameters('DefaultCollectionThroughput').Max]"
+            }
+        },
+        "resource": {
+            "id": "[variables('shareToTeamsSoftLinkDbName')]"
+        }
+    }
+},
+{
+    "type": "Microsoft.DocumentDB/databaseAccounts/sqlRoleDefinitions",
+    "apiVersion": "2021-10-15",
+    "name": "[concat(variables('cosmosdatabasename'), '/00000000-0000-0000-0000-000000000001')]",
+    "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosdatabasename'))]",
+        "[variables('migrateCosmosContainersAutoScaleScriptId')]"
+    ],
+    "properties": {
+        "roleName": "Cosmos DB Built-in Data Reader",
+        "type": "BuiltInRole",
+        "assignableScopes": [
+            "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosdatabasename'))]"
+        ],
+        "permissions": [
+            {
+                "dataActions": [
+                    "Microsoft.DocumentDB/databaseAccounts/readMetadata",
+                    "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/executeQuery",
+                    "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/readChangeFeed",
+                    "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/items/read"
+                ],
+                "notDataActions": []
+            }
+        ]
+    }
+},
+{
+    "type": "Microsoft.DocumentDB/databaseAccounts/sqlRoleDefinitions",
+    "apiVersion": "2021-10-15",
+    "name": "[concat(variables('cosmosdatabasename'), '/', variables('documentDbContributorRoleDefinitionId'))]",
+    "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosdatabasename'))]",
+        "[variables('migrateCosmosContainersAutoScaleScriptId')]"
+    ],
+    "properties": {
+        "roleName": "Cosmos DB Built-in Data Contributor",
+        "type": "BuiltInRole",
+        "assignableScopes": [
+            "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosdatabasename'))]"
+        ],
+        "permissions": [
+            {
+                "dataActions": [
+                    "Microsoft.DocumentDB/databaseAccounts/readMetadata",
+                    "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/*",
+                    "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/items/*"
+                ],
+                "notDataActions": []
+            }
+        ]
+    }
+},
+{
+    "type": "Microsoft.DocumentDb/databaseAccounts/sqlRoleAssignments",
+    "name": "[concat(variables('cosmosdatabasename'), '/', variables('documentDbRoleAssignmentId'))]",
+    "apiVersion": "2021-06-15",
+    "properties": {
+        "roleDefinitionId": "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlRoleDefinitions', variables('cosmosdatabasename'), variables('documentDbContributorRoleDefinitionId'))]",
+        "principalId": "[reference(variables('identityResourceId'), '2015-08-31-PREVIEW').principalId]",
+        "scope": "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosdatabasename'))]"
+    },
+    "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosdatabasename'))]",
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlRoleDefinitions', variables('cosmosdatabasename'), variables('documentDbContributorRoleDefinitionId'))]",
+        "[variables('migrateCosmosContainersAutoScaleScriptId')]"
+    ]
+},
+{
+    "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+    "apiVersion": "2022-02-15-preview",
+    "name": "[concat(variables('cosmosdatabasename'), '/', variables('connectionInfoDbName'),'/', variables('connectionInfoContainerName'))]",
+    "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', variables('cosmosdatabasename'), variables('connectionInfoDbName'))]",
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosdatabasename'))]",
+        "[variables('migrateCosmosContainersAutoScaleScriptId')]"
+    ],
+    "properties": {
+        "resource": {
+            "id": "ConnectionInfo",
+            "indexingPolicy": {
+                "indexingMode": "consistent",
+                "automatic": true,
+                "includedPaths": [
+                    {
+                        "path": "/TenantId/?"
+                    },
+                    {
+                        "path": "/Connections/[]/IsActive/?"
+                    },
+                    {
+                        "path": "/Connections/[]/Id/?"
+                    },
+                    {
+                        "path": "/Connections/[]/ConnectorId/?"
+                    },
+                    {
+                        "path": "/Connections/[]/CrmUserId/?"
+                    }
+                ],
+                "excludedPaths": [
+                    {
+                        "path": "/*"
+                    },
+                    {
+                        "path": "/\"_etag\"/?"
+                    }
+                ]
+            },
+            "partitionKey": {
+                "paths": [
+                    "/TenantId"
+                ],
+                "kind": "Hash"
+            },
+            "conflictResolutionPolicy": {
+                "mode": "LastWriterWins",
+                "conflictResolutionPath": "/_ts"
+            }
+        }
+    }
+},
+{
+    "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/throughputSettings",
+    "apiVersion": "2021-10-15",
+    "name": "[concat(variables('cosmosdatabasename'), '/', variables('connectionInfoDbName'), '/', variables('connectionInfoContainerName'), '/default')]",
+    "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers', variables('cosmosdatabasename'), variables('connectionInfoDbName'), variables('connectionInfoContainerName'))]",
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', variables('cosmosdatabasename'), variables('connectionInfoDbName'))]",
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosdatabasename'))]",
+        "[variables('migrateCosmosContainersAutoScaleScriptId')]"
+    ],
+    "properties": {
+        "resource": {
+            "autoscaleSettings": {
+                "maxThroughput": "[parameters('ConnectionInfoCollectionThroughput').Max]"
+            }
+        }
+    }
+},
+{
+    "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+    "apiVersion": "2021-10-15",
+    "name": "[concat(variables('cosmosdatabasename'), '/ProvisioningRequests/requests')]",
+    "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', variables('cosmosdatabasename'), 'ProvisioningRequests')]",
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosdatabasename'))]",
+        "[variables('migrateCosmosContainersAutoScaleScriptId')]"
+    ],
+    "properties": {
+        "resource": {
+            "id": "requests",
+            "indexingPolicy": {
+                "indexingMode": "consistent",
+                "automatic": true,
+                "includedPaths": [
+                    {
+                        "path": "/*"
+                    }
+                ],
+                "excludedPaths": [
+                    {
+                        "path": "/\"_etag\"/?"
+                    }
+                ]
+            },
+            "partitionKey": {
+                "paths": [
+                    "/id"
+                ],
+                "kind": "Hash"
+            },
+            "conflictResolutionPolicy": {
+                "mode": "LastWriterWins",
+                "conflictResolutionPath": "/_ts"
+            }
+        }
+    }
+},
+{
+    "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/throughputSettings",
+    "apiVersion": "2021-10-15",
+    "name": "[concat(variables('cosmosdatabasename'), '/ProvisioningRequests/requests/default')]",
+    "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers', variables('cosmosdatabasename'), 'ProvisioningRequests', 'requests')]",
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', variables('cosmosdatabasename'), 'ProvisioningRequests')]",
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosdatabasename'))]",
+        "[variables('migrateCosmosContainersAutoScaleScriptId')]"
+    ],
+    "properties": {
+        "resource": {
+            "autoscaleSettings": {
+                "maxThroughput": "[parameters('DefaultCollectionThroughput').Max]"
+            }
+        }
+    }
+},
+{
+    "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+    "apiVersion": "2021-10-15",
+    "name": "[concat(variables('cosmosdatabasename'), '/', variables('tenantInfoDB'),'/TenantInfo')]",
+    "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', variables('cosmosdatabasename'), variables('tenantInfoDB'))]",
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosdatabasename'))]",
+        "[variables('migrateCosmosContainersAutoScaleScriptId')]"
+    ],
+    "properties": {
+        "resource": {
+            "id": "TenantInfo",
+            "indexingPolicy": {
+                "indexingMode": "consistent",
+                "automatic": true,
+                "includedPaths": [
+                    {
+                        "path": "/*"
+                    }
+                ],
+                "excludedPaths": [
+                    {
+                        "path": "/\"_etag\"/?"
+                    }
+                ]
+            },
+            "partitionKey": {
+                "paths": [
+                    "/id"
+                ],
+                "kind": "Hash"
+            },
+            "conflictResolutionPolicy": {
+                "mode": "LastWriterWins",
+                "conflictResolutionPath": "/_ts"
+            }
+        }
+    }
+},
+{
+    "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/throughputSettings",
+    "apiVersion": "2021-10-15",
+    "name": "[concat(variables('cosmosdatabasename'), '/', variables('tenantInfoDB'),'/TenantInfo/default')]",
+    "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers', variables('cosmosdatabasename'), variables('tenantInfoDB'), 'TenantInfo')]",
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', variables('cosmosdatabasename'), variables('tenantInfoDB'))]",
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosdatabasename'))]",
+        "[variables('migrateCosmosContainersAutoScaleScriptId')]"
+    ],
+    "properties": {
+        "resource": {
+            "autoscaleSettings": {
+                "maxThroughput": "[parameters('DefaultCollectionThroughput').Max]"
+            }
+        }
+    }
+},
+{
+    "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+    "apiVersion": "2021-10-15",
+    "name": "[concat(variables('cosmosdatabasename'), '/', variables('licenseBackfillDbName'), '/', variables('tenantLicensesBackfillContainerName'))]",
+    "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', variables('cosmosdatabasename'), variables('licenseBackfillDbName'))]",
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosdatabasename'))]",
+        "[variables('migrateCosmosContainersAutoScaleScriptId')]"
+    ],
+    "properties": {
+        "resource": {
+            "id": "[variables('tenantLicensesBackfillContainerName')]",
+            "indexingPolicy": {
+                "indexingMode": "consistent",
+                "automatic": true,
+                "includedPaths": [
+                    {
+                        "path": "/*"
+                    }
+                ],
+                "excludedPaths": [
+                    {
+                        "path": "/\"_etag\"/?"
+                    }
+                ]
+            },
+            "partitionKey": {
+                "paths": [
+                    "/id"
+                ],
+                "kind": "Hash"
+            },
+            "conflictResolutionPolicy": {
+                "mode": "LastWriterWins",
+                "conflictResolutionPath": "/_ts"
+            }
+        }
+    }
+},
+{
+    "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/throughputSettings",
+    "apiVersion": "2021-10-15",
+    "name": "[concat(variables('cosmosdatabasename'), '/', variables('licenseBackfillDbName'), '/', variables('tenantLicensesBackfillContainerName'), '/default')]",
+    "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers', variables('cosmosdatabasename'), variables('licenseBackfillDbName'), variables('tenantLicensesBackfillContainerName'))]",
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', variables('cosmosdatabasename'), variables('licenseBackfillDbName'))]",
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosdatabasename'))]",
+        "[variables('migrateCosmosContainersAutoScaleScriptId')]"
+    ],
+    "properties": {
+        "resource": {
+            "autoscaleSettings": {
+                "maxThroughput": "[parameters('DefaultCollectionThroughput').Max]"
+            }
+        }
+    }
+},
+{
+    "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+    "apiVersion": "2021-10-15",
+    "name": "[concat(variables('cosmosdatabasename'), '/', variables('licenseBackfillDbName'), '/', variables('userLicensesBackfillContainerName'))]",
+    "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', variables('cosmosdatabasename'), variables('licenseBackfillDbName'))]",
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosdatabasename'))]",
+        "[variables('migrateCosmosContainersAutoScaleScriptId')]"
+    ],
+    "properties": {
+        "resource": {
+            "id": "[variables('userLicensesBackfillContainerName')]",
+            "indexingPolicy": {
+                "indexingMode": "consistent",
+                "automatic": true,
+                "includedPaths": [
+                    {
+                        "path": "/*"
+                    }
+                ],
+                "excludedPaths": [
+                    {
+                        "path": "/\"_etag\"/?"
+                    }
+                ]
+            },
+            "partitionKey": {
+                "paths": [
+                    "/tenantId"
+                ],
+                "kind": "Hash"
+            },
+            "conflictResolutionPolicy": {
+                "mode": "LastWriterWins",
+                "conflictResolutionPath": "/_ts"
+            }
+        }
+    }
+},
+{
+    "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/throughputSettings",
+    "apiVersion": "2021-10-15",
+    "name": "[concat(variables('cosmosdatabasename'), '/', variables('licenseBackfillDbName'), '/', variables('userLicensesBackfillContainerName'), '/default')]",
+    "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers', variables('cosmosdatabasename'), variables('licenseBackfillDbName'), variables('userLicensesBackfillContainerName'))]",
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', variables('cosmosdatabasename'), variables('licenseBackfillDbName'))]",
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosdatabasename'))]",
+        "[variables('migrateCosmosContainersAutoScaleScriptId')]"
+    ],
+    "properties": {
+        "resource": {
+            "autoscaleSettings": {
+                "maxThroughput": "[parameters('DefaultCollectionThroughput').Max]"
+            }
+        }
+    }
+},
+{
+    "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+    "apiVersion": "2021-10-15",
+    "name": "[concat(variables('cosmosdatabasename'), '/', variables('autoInstallDbName'), '/', variables('autoInstallStatusContainerName'))]",
+    "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', variables('cosmosdatabasename'), variables('autoInstallDbName'))]",
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosdatabasename'))]",
+        "[variables('migrateCosmosContainersAutoScaleScriptId')]"
+    ],
+    "properties": {
+        "resource": {
+            "id": "[variables('autoInstallStatusContainerName')]",
+            "indexingPolicy": {
+                "indexingMode": "consistent",
+                "automatic": true,
+                "includedPaths": [
+                    {
+                        "path": "/*"
+                    }
+                ],
+                "excludedPaths": [
+                    {
+                        "path": "/\"_etag\"/?"
+                    }
+                ]
+            },
+            "partitionKey": {
+                "paths": [
+                    "/TenantId"
+                ],
+                "kind": "Hash"
+            },
+            "uniqueKeyPolicy": {
+                "uniqueKeys": [
+                    {
+                        "paths": [
+                            "/UserId",
+                            "/AppId"
+                        ]
+                    }
+                ]
+            },
+            "conflictResolutionPolicy": {
+                "mode": "LastWriterWins",
+                "conflictResolutionPath": "/_ts"
+            }
+        }
+    }
+},
+{
+    "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/throughputSettings",
+    "apiVersion": "2021-10-15",
+    "name": "[concat(variables('cosmosdatabasename'), '/', variables('autoInstallDbName'), '/', variables('autoInstallStatusContainerName'), '/default')]",
+    "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers', variables('cosmosdatabasename'), variables('autoInstallDbName'), variables('autoInstallStatusContainerName'))]",
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', variables('cosmosdatabasename'), variables('autoInstallDbName'))]",
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosdatabasename'))]",
+        "[variables('migrateCosmosContainersAutoScaleScriptId')]"
+    ],
+    "properties": {
+        "resource": {
+            "autoscaleSettings": {
+                "maxThroughput": "[parameters('DefaultCollectionThroughput').Max]"
+            }
+        }
+    }
+},
+{
+    "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+    "apiVersion": "2021-10-15",
+    "name": "[concat(variables('cosmosdatabasename'), '/', variables('installDbName'), '/', variables('installStatusContainerName'))]",
+    "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', variables('cosmosdatabasename'), variables('installDbName'))]",
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosdatabasename'))]",
+        "[variables('migrateCosmosContainersAutoScaleScriptId')]"
+    ],
+    "properties": {
+        "resource": {
+            "id": "[variables('installStatusContainerName')]",
+            "indexingPolicy": {
+                "indexingMode": "consistent",
+                "automatic": true,
+                "includedPaths": [
+                    {
+                        "path": "/TenantId/?"
+                    },
+                    {
+                        "path": "/OrgId/?"
+                    },
+                    {
+                        "path": "/InstallStatus/JobId/?"
+                    }
+                ],
+                "excludedPaths": [
+                    {
+                        "path": "/*"
+                    },
+                    {
+                        "path": "/\"_etag\"/?"
+                    }
+                ]
+            },
+            "partitionKey": {
+                "paths": [
+                    "/TenantId"
+                ],
+                "kind": "Hash"
+            },
+            "conflictResolutionPolicy": {
+                "mode": "LastWriterWins",
+                "conflictResolutionPath": "/_ts"
+            }
+        }
+    }
+},
+{
+    "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/throughputSettings",
+    "apiVersion": "2021-10-15",
+    "name": "[concat(variables('cosmosdatabasename'), '/', variables('installDbName'), '/', variables('installStatusContainerName'), '/default')]",
+    "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers', variables('cosmosdatabasename'), variables('installDbName'), variables('installStatusContainerName'))]",
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', variables('cosmosdatabasename'), variables('installDbName'))]",
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosdatabasename'))]",
+        "[variables('migrateCosmosContainersAutoScaleScriptId')]"
+    ],
+    "properties": {
+        "resource": {
+            "autoscaleSettings": {
+                "maxThroughput": "[parameters('DefaultCollectionThroughput').Max]"
+            }
+        }
+    }
+},
+{
+    "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+    "apiVersion": "2023-04-15",
+    "name": "[concat(variables('cosmosdatabasename'), '/', variables('notificationDbName'),'/', variables('notificationContainerName'))]",
+    "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', variables('cosmosdatabasename'), variables('notificationDbName'))]",
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosdatabasename'))]",
+        "[variables('migrateCosmosContainersAutoScaleScriptId')]"
+    ],
+    "properties": {
+        "resource": {
+            "id": "Notification",
+            "indexingPolicy": {
+                "indexingMode": "consistent",
+                "automatic": true,
+                "includedPaths": [
+                    {
+                        "path": "/requestId/?"
+                    },
+                    {
+                        "path": "/userId/?"
+                    },
+                    {
+                        "path": "/tenantId/?"
+                    },
+                    {
+                        "path": "/externalTemplateId/?"
+                    },
+                    {
+                        "path": "/notificationSendingPlatform/?"
+                    },
+                    {
+                        "path": "/notificationCategory/?"
+                    },
+                    {
+                        "path": "/state/?"
+                    },
+                    {
+                        "path": "/expirationDate/?"
+                    },
+                    {
+                        "path": "/scheduledTime/?"
+                    },
+                    {
+                        "path": "/locale/?"
+                    }
+                ],
+                "excludedPaths": [
+                    {
+                        "path": "/*"
+                    },
+                    {
+                        "path": "/\"_etag\"/?"
+                    }
+                ]
+            },
+            "partitionKey": {
+                "paths": [
+                    "/id"
+                ],
+                "kind": "Hash"
+            },
+            "defaultTtl": 2592000,
+            "conflictResolutionPolicy": {
+                "mode": "LastWriterWins",
+                "conflictResolutionPath": "/_ts"
+            }
+        }
+    }
+},
+{
+    "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/throughputSettings",
+    "apiVersion": "2023-04-15",
+    "name": "[concat(variables('cosmosdatabasename'), '/', variables('notificationDbName'), '/', variables('notificationContainerName'), '/default')]",
+    "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers', variables('cosmosdatabasename'), variables('notificationDbName'), variables('notificationContainerName'))]",
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', variables('cosmosdatabasename'), variables('notificationDbName'))]",
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosdatabasename'))]",
+        "[variables('migrateCosmosContainersAutoScaleScriptId')]"
+    ],
+    "properties": {
+        "resource": {
+            "autoscaleSettings": {
+                "maxThroughput": "[parameters('NotificationCollectionThroughput').Max]"
+            }
+        }
+    }
+},
+{
+    "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+    "apiVersion": "2023-04-15",
+    "name": "[concat(variables('cosmosdatabasename'), '/', variables('salesCopilotTenantSettingsDbName'),'/', variables('salesCopilotTenantSettingsContainerName'))]",
+    "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', variables('cosmosdatabasename'), variables('salesCopilotTenantSettingsDbName'))]",
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosdatabasename'))]",
+        "[variables('migrateCosmosContainersAutoScaleScriptId')]"
+    ],
+    "properties": {
+        "resource": {
+            "id": "[variables('salesCopilotTenantSettingsContainerName')]",
+            "indexingPolicy": {
+                "indexingMode": "consistent",
+                "automatic": true,
+                "includedPaths": [
+                    {
+                        "path": "/settings/?"
+                    }
+                ],
+                "excludedPaths": [
+                    {
+                        "path": "/*"
+                    },
+                    {
+                        "path": "/\"_etag\"/?"
+                    }
+                ]
+            },
+            "partitionKey": {
+                "paths": [
+                    "/id"
+                ],
+                "kind": "Hash"
+            },
+            "conflictResolutionPolicy": {
+                "mode": "LastWriterWins",
+                "conflictResolutionPath": "/_ts"
+            }
+        }
+    }
+},
+{
+    "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/throughputSettings",
+    "apiVersion": "2023-04-15",
+    "name": "[concat(variables('cosmosdatabasename'), '/', variables('salesCopilotTenantSettingsDbName'),'/', variables('salesCopilotTenantSettingsContainerName'), '/default')]",
+    "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers', variables('cosmosdatabasename'), variables('salesCopilotTenantSettingsDbName'), variables('salesCopilotTenantSettingsContainerName'))]",
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', variables('cosmosdatabasename'), variables('salesCopilotTenantSettingsDbName'))]",
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosdatabasename'))]",
+        "[variables('migrateCosmosContainersAutoScaleScriptId')]"
+    ],
+    "properties": {
+        "resource": {
+            "autoscaleSettings": {
+                "maxThroughput": "[parameters('TenantSettingsCollectionThroughput').Max]"
+            }
+        }
+    }
+},
+{
+    "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+    "apiVersion": "2023-04-15",
+    "name": "[concat(variables('cosmosdatabasename'), '/', variables('collabSpacesDbName'),'/', variables('collabSpacesContainerName'))]",
+    "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', variables('cosmosdatabasename'), variables('collabSpacesDbName'))]",
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosdatabasename'))]",
+        "[variables('migrateCosmosContainersAutoScaleScriptId')]"
+    ],
+    "properties": {
+        "resource": {
+            "id": "[variables('collabSpacesContainerName')]",
+            "indexingPolicy": {
+                "indexingMode": "consistent",
+                "automatic": true,
+                "includedPaths": [],
+                "excludedPaths": [
+                    {
+                        "path": "/*"
+                    },
+                    {
+                        "path": "/\"_etag\"/?"
+                    }
+                ]
+            },
+            "partitionKey": {
+                "paths": [
+                    "/TenantId"
+                ],
+                "kind": "Hash"
+            },
+            "conflictResolutionPolicy": {
+                "mode": "LastWriterWins",
+                "conflictResolutionPath": "/_ts"
+            }
+        }
+    }
+},
+{
+    "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/throughputSettings",
+    "apiVersion": "2023-04-15",
+    "name": "[concat(variables('cosmosdatabasename'), '/', variables('collabSpacesDbName'),'/', variables('collabSpacesContainerName'), '/default')]",
+    "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers', variables('cosmosdatabasename'), variables('collabSpacesDbName'), variables('collabSpacesContainerName'))]",
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', variables('cosmosdatabasename'), variables('collabSpacesDbName'))]",
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosdatabasename'))]",
+        "[variables('migrateCosmosContainersAutoScaleScriptId')]"
+    ],
+    "properties": {
+        "resource": {
+            "autoscaleSettings": {
+                "maxThroughput": "[parameters('CollabSpacesCollectionThroughput').Max]"
+            }
+        }
+    }
+},
+{
+    "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+    "apiVersion": "2023-04-15",
+    "name": "[concat(variables('cosmosdatabasename'), '/', variables('shareToTeamsSoftLinkDbName'),'/', variables('shareToTeamsSoftLinkContainerName'))]",
+    "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', variables('cosmosdatabasename'), variables('shareToTeamsSoftLinkDbName'))]",
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosdatabasename'))]",
+        "[variables('migrateCosmosContainersAutoScaleScriptId')]"
+    ],
+    "properties": {
+        "resource": {
+            "id": "[variables('shareToTeamsSoftLinkContainerName')]",
+            "indexingPolicy": {
+                "indexingMode": "consistent",
+                "automatic": true,
+                "includedPaths": [],
+                "excludedPaths": [
+                    {
+                        "path": "/*"
+                    },
+                    {
+                        "path": "/\"_etag\"/?"
+                    }
+                ]
+            },
+            "partitionKey": {
+                "paths": [
+                    "/TenantId"
+                ],
+                "kind": "Hash"
+            },
+            "conflictResolutionPolicy": {
+                "mode": "LastWriterWins",
+                "conflictResolutionPath": "/_ts"
+            }
+        }
+    }
+}
+]
+}
