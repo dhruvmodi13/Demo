@@ -85,6 +85,10 @@
         "vnet": {
             "defaultValue": "vnet-salesproductivity",
             "type": "string"
+        },
+        "cosmos_NestedDeploymentName": {
+            "type": "string",
+            "defaultValue": "[concat('CosmosIpNested', uniqueString(resourceGroup().id, utcNow()))]"
         }
     },
     "variables": {
