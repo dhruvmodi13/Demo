@@ -159,7 +159,7 @@
                 "publicNetworkAccess": "Enabled",
                 "enableAutomaticFailover": false,
                 "enableMultipleWriteLocations": false,
-                "isVirtualNetworkFilterEnabled": false,
+                "isVirtualNetworkFilterEnabled": true,
                 "virtualNetworkRules": [
                     {
                         "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('vnetName'), 'default')]",
