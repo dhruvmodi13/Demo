@@ -34,9 +34,6 @@
         "Ev2ScriptUrl": {
             "type": "string"
         },
-        "Ev2TemplateSAS": {
-            "type": "securestring"
-        },
         "hasCosmosBCDRRegion": {
             "type": "bool"
         },
