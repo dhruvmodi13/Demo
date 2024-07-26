@@ -191,17 +191,6 @@
                 "locations": "[union(createArray(createObject('locationName', parameters('cosmosreadwritelocation'), 'failoverPriority', 0, 'isZoneRedundant', parameters('hpaSupportAvailableCosmosWriteRegion'))), if(parameters('hasCosmosBCDRRegion'), createArray(createObject('locationName', parameters('cosmosSecondarylocation'), 'failoverPriority', 1, 'isZoneRedundant', parameters('hpaSupportAvailableCosmosReadRegion'))), createArray()))]",
                 "cors": [],
                 "capabilities": [],
-                "ipRules": {
-                    "copy": [
-                        {
-                            "name": "ipRules",
-                            "count": "[length(split(reference(parameters('cosmos_NestedDeploymentName'), '2021-04-01').outputs.updatedIpList.value, ','))]",
-                            "input": {
-                                "ipAddressOrRange": "[split(reference(parameters('cosmos_NestedDeploymentName'), '2021-04-01').outputs.updatedIpList.value, ',')[copyIndex('ipRules')]]"
-                            }
-                        }
-                    ]
-                },
                 "backupPolicy": {
                     "type": "Continuous",
                     "continuousModeProperties": {
@@ -259,6 +248,15 @@
                         "updatedIpList": {
                             "type": "string",
                             "value": "[reference(variables('ipUpdateCosmosDBScriptId'), '2020-10-01').outputs.ipAddress]"
+                        },
+                        "updatedIpList2": {
+                            "type": "array",
+                            "copy": {
+                                "count": "[length(split(reference(variables('ipUpdateCosmosDBScriptId'), '2020-10-01').outputs.ipAddress, ','))]",
+                                "input": {
+                                    "ipAddressOrRange": "[split(reference(variables('ipUpdateCosmosDBScriptId'), ''2020-10-01').outputs.ipAddress, ',')[copyIndex('ipRules')]]"
+                                }
+                            }
                         }
                     }
                 }
