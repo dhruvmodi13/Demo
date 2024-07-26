@@ -130,7 +130,7 @@
         "ipUpdateCosmosDBScriptId": "[resourceId('Microsoft.Resources/deploymentScripts',variables('ipUpdateCosmosDB'))]",
         "ipUpdateCosmosDBScriptUri": "[concat(parameters('Ev2ScriptUrl'),'CosmosDB.IPUpdate2.ps1')]",
         "deploymentScriptsUpdateTag": "[guid(uniqueString('CosmosDB.AutoScale.Migrate', parameters('scaleUnit'), subscription().subscriptionId, '1'))]",
-        "deploymentScriptsUpdateTag1": "[guid(uniqueString('CosmosDB.IPUpdate', parameters('scaleUnit'), subscription().subscriptionId, '1'))]",
+        "deploymentScriptsUpdateTag1": "[guid(uniqueString('CosmosDB.IPUpdate', parameters('scaleUnit'), subscription().subscriptionId, '2'))]",
         "vnetName": "[concat(parameters('vnet'),parameters('scaleUnit'))]",
         "staticIpAddresses": [
             "207.68.190.32/27",
