@@ -151,6 +151,9 @@
             "name": "[variables('cosmosdatabasename')]",
             "location": "[variables('location')]",
             "condition": "[parameters('isDatabaseCreationEnabled')]",
+            "dependsOn": [
+                "[parameters("cosmos_NestedDeploymentName")]
+            ],
             "tags": {
                 "defaultExperience": "Core (SQL)",
                 "hidden-cosmos-mmspecial": ""
