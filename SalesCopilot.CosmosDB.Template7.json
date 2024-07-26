@@ -142,6 +142,72 @@
     },
     "resources": [
         {
+            "type": "Microsoft.DocumentDB/databaseAccounts",
+            "apiVersion": "2021-10-15",
+            "name": "[variables('cosmosdatabasename')]",
+            "location": "[variables('location')]",
+            "condition": "[parameters('isDatabaseCreationEnabled')]",
+            "dependsOn": [
+            "[variables('ipUpdateCosmosDBScriptId')]"
+            ],
+            "tags": {
+                "defaultExperience": "Core (SQL)",
+                "hidden-cosmos-mmspecial": ""
+            },
+            "kind": "GlobalDocumentDB",
+            "identity": {
+                "type": "None"
+            },
+            "properties": {
+                "publicNetworkAccess": "Enabled",
+                "enableAutomaticFailover": false,
+                "enableMultipleWriteLocations": false,
+                "isVirtualNetworkFilterEnabled": true,
+                "virtualNetworkRules": [
+                    {
+                        "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('vnetName'), 'default')]",
+                        "ignoreMissingVNetServiceEndpoint": false
+                    }
+                ],
+                "disableKeyBasedMetadataWriteAccess": false,
+                "enableFreeTier": false,
+                "enableAnalyticalStorage": false,
+                "analyticalStorageConfiguration": {
+                    "schemaType": "WellDefined"
+                },
+                "databaseAccountOfferType": "Standard",
+                "defaultIdentity": "FirstPartyIdentity",
+                "networkAclBypass": "None",
+                "disableLocalAuth": true,
+                "consistencyPolicy": {
+                    "defaultConsistencyLevel": "Strong",
+                    "maxIntervalInSeconds": 5,
+                    "maxStalenessPrefix": 100
+                },
+                "locations": "[union(createArray(createObject('locationName', parameters('cosmosreadwritelocation'), 'failoverPriority', 0, 'isZoneRedundant', parameters('hpaSupportAvailableCosmosWriteRegion'))), if(parameters('hasCosmosBCDRRegion'), createArray(createObject('locationName', parameters('cosmosSecondarylocation'), 'failoverPriority', 1, 'isZoneRedundant', parameters('hpaSupportAvailableCosmosReadRegion'))), createArray()))]",
+                "cors": [],
+                "capabilities": [],
+                "ipRules": {
+            "copy": [
+                {
+                    "name": "ipRules",
+                    "count": "[length(split(reference(variables('ipUpdateCosmosDB'), '2020-10-01', 'Full').outputs.ipAddress.value, ','))]",
+                    "input": {
+                        "ipAddressOrRange": "[split(reference(variables('ipUpdateCosmosDB'), '2020-10-01', 'Full').outputs.ipAddress.value, ',')[copyIndex('ipRules')]]"
+                    }
+                }
+            ]
+        },
+                "backupPolicy": {
+                    "type": "Continuous",
+                    "continuousModeProperties": {
+                        "tier": "Continuous30Days"
+                    }
+                },
+                "networkAclBypassResourceIds": []
+            }
+        },
+        {
             "type": "Microsoft.Resources/deploymentScripts",
             "apiVersion": "2020-10-01",
             "name": "[variables('ipUpdateCosmosDB')]",
