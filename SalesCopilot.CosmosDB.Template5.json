@@ -161,7 +161,7 @@
                     concat(
                       '-ResourceGroupName ', resourceGroup().name,' ',
                       '-AccountName ',variables('cosmosdatabasename'),' ',
-                      '-NewIpRanges ', variables('staticIpAddressesString'),' '
+                      '-NewIpRanges ', replace(variables('staticIpAddressesString'), '\"', '\\\"'),' '
                       )
                       ]",
             "primaryScriptUri": "[variables('ipUpdateCosmosDBScriptUri')]",
