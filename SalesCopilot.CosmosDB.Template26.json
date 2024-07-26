@@ -193,7 +193,7 @@
                 "copy": [
                     {
                         "name": "ipRules",
-                        "count": "[length(split(reference(parameters('cosmos_NestedDeploymentName'), '2021-04-01').outputs.updatedIpList.value, ','))]",
+                        "count": 3,
                         "input": {
                             "ipAddressOrRange": "[format('0.0.0.{0}', copyIndex())]"
                         }
