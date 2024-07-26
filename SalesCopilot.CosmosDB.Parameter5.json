@@ -64,7 +64,7 @@
             "value": true
         },
         "vnet": {
-            "value": "vnet-salesproductivityafdev2"
+            "value": "vnet-salesproductivity"
         }
     }
 }
