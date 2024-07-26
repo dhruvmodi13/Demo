@@ -1,0 +1,73 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "scaleUnit": {
+            "value": "int"
+        },
+        "cosmosreadwritelocation": {
+            "value": "West US"
+        },
+        "cosmosSecondarylocation": {
+            "value": "East US"
+        },
+        "hasCosmosBCDRRegion": {
+            "value": false
+        },
+        "backupStorageRedundancy": {
+            "value": "Geo"
+        },
+        "ConnectionInfoCollectionThroughput": {
+            "value": {
+                "Max": 1000
+            }
+        },
+        "NotificationCollectionThroughput": {
+            "value": {
+                "Max": 1000
+            }
+        },
+        "TenantSettingsCollectionThroughput": {
+            "value": {
+                "Max": 1000
+            }
+        },
+        "CollabSpacesCollectionThroughput": {
+            "value": {
+                "Max": 1000
+            }
+        },
+        "DefaultCollectionThroughput": {
+            "value": {
+                "Max": 1000
+            }
+        },
+        "Ev2TemplateSAS": {
+            "value": "<SaS>"
+        },
+        "Ev2ScriptUrl": {
+            "value": "<Scripts Url>"
+        },
+        "DeploymentScriptsCleanupPreference": {
+            "value": "OnSuccess"
+        },
+        "hpaSupportAvailableVnet": {
+            "value": false
+        },
+        "preserveOldIp": {
+            "value": true
+        },
+        "hpaSupportAvailableCosmosWriteRegion": {
+            "value": false
+        },
+        "hpaSupportAvailableCosmosReadRegion": {
+            "value": false
+        },
+        "isDatabaseCreationEnabled": {
+            "value": true
+        },
+        "vnet": {
+            "value": "vnet-salesproductivity"
+        }
+    }
+}
