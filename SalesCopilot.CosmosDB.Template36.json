@@ -126,6 +126,8 @@
         "identityId": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('identityName'))]",
         "migrateCosmosContainersAutoScale": "[concat('MigrateCosmosContainersAutoScale', resourceGroup().location)]",
         "migrateCosmosContainersAutoScaleScriptId": "[resourceId('Microsoft.Resources/deploymentScripts',variables('migrateCosmosContainersAutoScale'))]",
+        "ipUpdateCosmosDB": "[concat('ipUpdateCosmosDB', resourceGroup().location)]",
+        "ipUpdateCosmosDBScriptId": "[resourceId('Microsoft.Resources/deploymentScripts',variables('ipUpdateCosmosDB'))]",
         "ipUpdateCosmosDBScriptUri": "[concat(parameters('Ev2ScriptUrl'),'CosmosDB.IPUpdate2.ps1')]",
         "deploymentScriptsUpdateTag": "[guid(uniqueString('CosmosDB.AutoScale.Migrate', parameters('scaleUnit'), subscription().subscriptionId, '1'))]",
         "deploymentScriptsUpdateTag1": "[guid(uniqueString('CosmosDB.IPUpdate', parameters('scaleUnit'), subscription().subscriptionId, '2'))]",
@@ -208,23 +210,6 @@
             }
         },
         {
-            "type": "Microsoft.Resources/deployments",
-            "apiVersion": "2021-04-01",
-            "name": "[parameters('cosmos_NestedDeploymentName')]",
-            "subscriptionId": "[subscription().subscriptionId]",
-            "resourceGroup": "[resourceGroup().name]",
-            "properties":{
-                "mode": "Incremental",
-                "template":
-                {
-                    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
-                    "contentVersion": "1.0.0.0",
-                    "parameters": {},
-                    "variables": {
-                        "ipUpdateCosmosDB": "[concat('ipUpdateCosmosDB2', resourceGroup().location)]",
-                    },
-                    "resources": [
-                        {
                             "type": "Microsoft.Resources/deploymentScripts",
                             "apiVersion": "2020-10-01",
                             "name": "[variables('ipUpdateCosmosDB')]",
@@ -252,15 +237,5 @@
                             "retentionInterval": "P1D"
                             }
                         }
-                    ],
-                    "outputs": {
-                        "updatedIpList": {
-                            "type": "array",
-                            "value": "[reference(resourceId('Microsoft.Resources/deploymentScripts',variables('ipUpdateCosmosDB')), '2020-10-01').outputs.ipAddress]"
-                        }
-                }
-            }
-        }
-    }
 ]
 }
