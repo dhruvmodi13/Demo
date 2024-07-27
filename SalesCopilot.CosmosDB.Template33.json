@@ -127,7 +127,6 @@
         "migrateCosmosContainersAutoScale": "[concat('MigrateCosmosContainersAutoScale', resourceGroup().location)]",
         "migrateCosmosContainersAutoScaleScriptId": "[resourceId('Microsoft.Resources/deploymentScripts',variables('migrateCosmosContainersAutoScale'))]",
         "ipUpdateCosmosDB": "[concat('ipUpdateCosmosDB2', resourceGroup().location)]",
-        "ipUpdateCosmosDBScriptId": "[resourceId('Microsoft.Resources/deploymentScripts',variables('ipUpdateCosmosDB'))]",
         "ipUpdateCosmosDBScriptUri": "[concat(parameters('Ev2ScriptUrl'),'CosmosDB.IPUpdate2.ps1')]",
         "deploymentScriptsUpdateTag": "[guid(uniqueString('CosmosDB.AutoScale.Migrate', parameters('scaleUnit'), subscription().subscriptionId, '1'))]",
         "deploymentScriptsUpdateTag1": "[guid(uniqueString('CosmosDB.IPUpdate', parameters('scaleUnit'), subscription().subscriptionId, '2'))]",
@@ -222,7 +221,9 @@
                     "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
                     "contentVersion": "1.0.0.0",
                     "parameters": {},
-                    "variables": {},
+                    "variables": {
+                        "ipUpdateCosmosDBScriptId": "[resourceId('Microsoft.Resources/deploymentScripts',variables('ipUpdateCosmosDB'))]",
+                    },
                     "resources": [
                         {
                             "type": "Microsoft.Resources/deploymentScripts",
