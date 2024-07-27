@@ -190,15 +190,7 @@
                 },
                 "locations": "[union(createArray(createObject('locationName', parameters('cosmosreadwritelocation'), 'failoverPriority', 0, 'isZoneRedundant', parameters('hpaSupportAvailableCosmosWriteRegion'))), if(parameters('hasCosmosBCDRRegion'), createArray(createObject('locationName', parameters('cosmosSecondarylocation'), 'failoverPriority', 1, 'isZoneRedundant', parameters('hpaSupportAvailableCosmosReadRegion'))), createArray()))]",
                 "cors": [],
-                "copy": [
-                    {
-                        "name": "ipRules",
-                        "count": 3,
-                        "input": {
-                            "ipAddressOrRange": "[format('0.0.0.{0}', copyIndex('ipRules'))]"
-                        }
-                    }
-                ],
+                "ipRules": "[reference('ipUpdateCosmosDBScriptId','2020-10-01').outputs.ipAddress]",
                 "capabilities": [],
                 "backupPolicy": {
                     "type": "Continuous",
