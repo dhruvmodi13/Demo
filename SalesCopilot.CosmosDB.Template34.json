@@ -222,7 +222,6 @@
                     "contentVersion": "1.0.0.0",
                     "parameters": {},
                     "variables": {
-                        "ipUpdateCosmosDBScriptId": "[resourceId('Microsoft.Resources/deploymentScripts',variables('ipUpdateCosmosDB'))]",
                     },
                     "resources": [
                         {
@@ -257,7 +256,7 @@
                     "outputs": {
                         "updatedIpList": {
                             "type": "array",
-                            "value": "[reference(variables('ipUpdateCosmosDBScriptId'), '2020-10-01').outputs.ipAddress]"
+                            "value": "[reference(resourceId('Microsoft.Resources/deploymentScripts',variables('ipUpdateCosmosDB')), '2020-10-01').outputs.ipAddress]"
                         }
                 }
             }
