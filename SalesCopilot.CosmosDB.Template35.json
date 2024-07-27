@@ -126,7 +126,6 @@
         "identityId": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('identityName'))]",
         "migrateCosmosContainersAutoScale": "[concat('MigrateCosmosContainersAutoScale', resourceGroup().location)]",
         "migrateCosmosContainersAutoScaleScriptId": "[resourceId('Microsoft.Resources/deploymentScripts',variables('migrateCosmosContainersAutoScale'))]",
-        "ipUpdateCosmosDB": "[concat('ipUpdateCosmosDB2', resourceGroup().location)]",
         "ipUpdateCosmosDBScriptUri": "[concat(parameters('Ev2ScriptUrl'),'CosmosDB.IPUpdate2.ps1')]",
         "deploymentScriptsUpdateTag": "[guid(uniqueString('CosmosDB.AutoScale.Migrate', parameters('scaleUnit'), subscription().subscriptionId, '1'))]",
         "deploymentScriptsUpdateTag1": "[guid(uniqueString('CosmosDB.IPUpdate', parameters('scaleUnit'), subscription().subscriptionId, '2'))]",
@@ -222,6 +221,7 @@
                     "contentVersion": "1.0.0.0",
                     "parameters": {},
                     "variables": {
+                        "ipUpdateCosmosDB": "[concat('ipUpdateCosmosDB2', resourceGroup().location)]",
                     },
                     "resources": [
                         {
