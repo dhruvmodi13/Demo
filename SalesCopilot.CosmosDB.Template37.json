@@ -152,7 +152,7 @@
             "location": "[variables('location')]",
             "condition": "[parameters('isDatabaseCreationEnabled')]",
             "dependsOn": [
-                "[parameters('cosmos_NestedDeploymentName')]"
+                "[variables('ipUpdateCosmosDBScriptId')]"
             ],
             "tags": {
                 "defaultExperience": "Core (SQL)",
