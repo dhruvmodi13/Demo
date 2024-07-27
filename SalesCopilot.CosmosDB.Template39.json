@@ -190,7 +190,7 @@
                 },
                 "locations": "[union(createArray(createObject('locationName', parameters('cosmosreadwritelocation'), 'failoverPriority', 0, 'isZoneRedundant', parameters('hpaSupportAvailableCosmosWriteRegion'))), if(parameters('hasCosmosBCDRRegion'), createArray(createObject('locationName', parameters('cosmosSecondarylocation'), 'failoverPriority', 1, 'isZoneRedundant', parameters('hpaSupportAvailableCosmosReadRegion'))), createArray()))]",
                 "cors": [],
-                "ipRules": "[reference('ipUpdateCosmosDBScriptId','2020-10-01').outputs.ipAddress]",
+                "ipRules": "[reference(variables('ipUpdateCosmosDBScriptId'),'2020-10-01').outputs.ipAddress]",
                 "capabilities": [],
                 "backupPolicy": {
                     "type": "Continuous",
