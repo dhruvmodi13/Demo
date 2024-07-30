@@ -1,0 +1,55 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "scaleUnit": {
+            "type": "string",
+            "metadata": {
+                "description": "Describes the scale unit that is to be used to uniquely identify each resource"
+            }
+        },
+        "hpaSupportAvailableRedis": {
+            "type": "bool",
+            "metadata": {
+                "description": "Specify if Hyper Availability support is available in Redis for this Region"
+            }
+        },
+        "islandIpRanges": {
+            "type": "string"
+        }
+    },
+    "variables": {
+        "hpaRedisSuffix": "[if(parameters('hpaSupportAvailableRedis'), 'hpa', '')]",
+        "redisServerName": "[concat('spRedisCache' ,parameters('scaleUnit'),variables('hpaRedisSuffix'))]",
+        "parsedIslandIpRanges": "[json(parameters('islandIpRanges'))]",
+        "copy": [
+            {
+                "name": "ipRules",
+                "count": "[length(variables('parsedIslandIpRanges').ipRanges)]",
+                "input": "[variables('parsedIslandIpRanges').ipRanges[copyIndex('ipRules')]]"
+            }
+        ],
+        "ipRulesCount": "[length(variables('ipRules'))]"
+    },
+    "resources": [
+        {
+            "copy": {
+                "name": "islandFirewall",
+                "count": "[variables('ipRulesCount')]",
+                "mode": "Parallel",
+                "batchSize": 15
+            },
+            "type": "Microsoft.Cache/Redis/firewallRules",
+            "apiVersion": "2021-06-01",
+            "name": "[concat(variables('redisServerName'), '/CSCRule-', copyIndex())]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Cache/Redis', variables('redisServerName'))]"
+            ],
+            "properties": {
+                "startIP": "parameters('ipRules')[copyIndex()]",
+                "endIP": "parameters('ipRules')[copyIndex()]"
+            }
+        }
+    ],
+    "outputs": {}
+}
