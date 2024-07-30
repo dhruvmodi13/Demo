@@ -21,7 +21,7 @@
     },
     "variables": {
         "hpaSupportAvailableRedis": "[bool(parameters('hpaSupportAvailableRedis'))]",
-        "hpaRedisSuffix": "[if(variables'hpaSupportAvailableRedis'), 'hpa', '')]",
+        "hpaRedisSuffix": "[if(variables('hpaSupportAvailableRedis'), 'hpa', '')]",
         "redisServerName": "[concat('spRedisCache' ,parameters('scaleUnit'),variables('hpaRedisSuffix'))]",
         "parsedIslandIpRanges": "[json(parameters('islandIpRanges'))]",
         "copy": [
