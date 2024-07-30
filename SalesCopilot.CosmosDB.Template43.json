@@ -132,7 +132,7 @@
         "parsedIslandIpRanges": "[json(parameters('islandIpRanges'))]",
         "ipUpdateCosmosDB": "[concat('CSC.ipUpdateCosmosDB', resourceGroup().location)]",
         "ipUpdateCosmosDBScriptId": "[resourceId('Microsoft.Resources/deploymentScripts',variables('ipUpdateCosmosDB'))]",
-        "deploymentScriptsUpdateTag": "[guid(uniqueString('CSC.CosmosDB.IPUpdate', parameters('scaleUnit'), subscription().subscriptionId, '1'))]",
+        "deploymentScriptsUpdateTag": "[guid(uniqueString('CSC.CosmosDB.IPUpdate', parameters('scaleUnit'), subscription().subscriptionId, variables('ipRulesString')))]",
         "deploymentScriptsCleanupPreference": "Always",
         "copy": [
             {
