@@ -184,5 +184,38 @@
             "retentionInterval": "P1D"
             }
         },
-]
+        {
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlRoleDefinitions",
+            "apiVersion": "2021-10-15",
+            "name": "[concat(variables('cosmosdatabasename'), '/', variables('documentDbContributorRoleDefinitionId'))]",
+            "dependsOn": [],
+            "properties": {
+                "roleName": "Cosmos DB Built-in Data Contributor",
+                "type": "BuiltInRole",
+                "assignableScopes": [
+                    "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosdatabasename'))]"
+                ],
+                "permissions": [
+                    {
+                        "dataActions": [
+                            "Microsoft.DocumentDB/databaseAccounts/readMetadata",
+                            "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/*",
+                            "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/items/*"
+                        ],
+                        "notDataActions": []
+                    }
+                ]
+            }
+        }
+],
+    "outputs": {
+    "resourceName": {
+        "type": "string",
+        "value": "[variables('cosmosdatabasename')]"
+    },
+    "resourceId": {
+        "type": "string",
+        "value": "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosdatabasename'))]"
+    }
+}
 }
