@@ -1,0 +1,188 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "backupStorageRedundancy": {
+            "defaultValue": "Geo",
+            "type": "string"
+        },
+        "CollabSpacesCollectionThroughput": {
+            "type": "object"
+        },
+        "ConnectionInfoCollectionThroughput": {
+            "type": "object"
+        },
+        "cosmosreadwritelocation": {
+            "type": "string",
+            "metadata": {
+                "description": "Cosmos Read/Write Location"
+            }
+        },
+        "cosmosSecondarylocation": {
+            "type": "string"
+        },
+        "DefaultCollectionThroughput": {
+            "type": "object"
+        },
+        "DeploymentScriptsCleanupPreference": {
+            "type": "string",
+            "defaultValue": "OnSuccess",
+            "metadata": {
+                "description": "Value when to delete the Deployment Scripts artifacts"
+            }
+        },
+        "Ev2ScriptUrl": {
+            "type": "string"
+        },
+        "hasCosmosBCDRRegion": {
+            "type": "bool"
+        },
+        "NotificationCollectionThroughput": {
+            "type": "object"
+        },
+        "scaleUnit": {
+            "type": "string",
+            "metadata": {
+                "description": "Describes the scale unit that is to be used to uniquely identify each resource"
+            }
+        },
+        "TenantSettingsCollectionThroughput": {
+            "type": "object",
+            "defaultValue": {
+                "Max": 4000
+            }
+        },
+        "hpaSupportAvailableVnet": {
+            "type": "bool",
+            "metadata": {
+                "description": "Specify if Hyper Availability support is available in VNet for this Region"
+            }
+        },
+        "preserveOldIp": {
+            "type": "bool",
+            "metadata": {
+                "description": "Specify if old ip should be preserved (only applicable when hpaSupportAvailableVnet is true)"
+            }
+        },
+        "hpaSupportAvailableCosmosWriteRegion": {
+            "type": "bool",
+            "metadata": {
+                "description": "Specify if Hyper Availability support is available in CosmosDb for this Write region"
+            }
+        },
+        "hpaSupportAvailableCosmosReadRegion": {
+            "type": "bool",
+            "metadata": {
+                "description": "Specify if Hyper Availability support is available in CosmosDb for this Read region"
+            }
+        },
+        "isDatabaseCreationEnabled": {
+            "type": "bool",
+            "metadata": {
+                "description": "Specify if the database creation is enabled"
+            }
+        },
+        "vnet": {
+            "defaultValue": "vnet-salesproductivity",
+            "type": "string"
+        },
+        "cosmos_NestedDeploymentName": {
+            "type": "string",
+            "defaultValue": "[concat('CosmosIpNested', uniqueString(resourceGroup().id, utcNow()))]"
+        },
+        "islandIpRanges": {
+            "type": "string"
+        }
+    },
+    "variables": {
+        "hpaSuffix": "[if(parameters('hpaSupportAvailableVnet'), 'hpa', '')]",
+        "location": "[resourceGroup().location]",
+        "spWebAppPrefix": "salesproductivityservice",
+        "spWebAppName": "[concat(variables('spWebAppPrefix'),parameters('scaleUnit'))]",
+        "identityResourceId": "[concat(resourceId('Microsoft.Web/sites', variables('spWebAppName')),'/providers/Microsoft.ManagedIdentity/Identities/default')]",
+        "cosmosdb": "cosmosdatabase",
+        "cosmosdatabasename": "[concat(variables('cosmosdb'),parameters('scaleUnit'))]",
+        "tenantInfoDB": "VivaSalesTenantInfoDb",
+        "publicIpAddressNameBase": "NAT-IP-SPPublicIPAddress",
+        "publicIPAddressName": "[concat(variables('publicIpAddressNameBase'),parameters('scaleUnit'),variables('hpaSuffix'))]",
+        "publicIPAddressNameOld": "[concat(variables('publicIpAddressNameBase'),parameters('scaleUnit'))]",
+        "documentDbContributorRoleDefinitionId": "00000000-0000-0000-0000-000000000002",
+        "documentDbRoleAssignmentId": "4e9ef385-ba96-48be-8398-47ff269f8c03",
+        "connectionInfoDbName": "VivaSalesConnectionInfoDb",
+        "connectionInfoContainerName": "ConnectionInfo",
+        "licenseBackfillDbName": "VivaSalesLicenseBackfillInfoDb",
+        "tenantLicensesBackfillContainerName": "TenantsLicenses",
+        "userLicensesBackfillContainerName": "UsersLicenses",
+        "autoInstallDbName": "AutoInstallDb",
+        "autoInstallStatusContainerName": "AutoInstallStatus",
+        "installDbName": "InstallDb",
+        "installStatusContainerName": "InstallStatus",
+        "notificationDbName": "NotificationDb",
+        "notificationContainerName": "Notification",
+        "salesCopilotTenantSettingsDbName": "SalesCopilotTenantSettingsDb",
+        "salesCopilotTenantSettingsContainerName": "TenantSettings",
+        "collabSpacesDbName": "CollabSpacesDb",
+        "collabSpacesContainerName": "CollabSpaces",
+        "shareToTeamsSoftLinkDbName": "ShareToTeamsSoftLinkDb",
+        "shareToTeamsSoftLinkContainerName": "ShareToTeamsSoftLink",
+        "identityName": "[concat('depUserIdentity', parameters('scaleUnit'))]",
+        "identityId": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('identityName'))]",
+        "migrateCosmosContainersAutoScale": "[concat('MigrateCosmosContainersAutoScale', resourceGroup().location)]",
+        "migrateCosmosContainersAutoScaleScriptId": "[resourceId('Microsoft.Resources/deploymentScripts',variables('migrateCosmosContainersAutoScale'))]",
+        "parsedIslandIpRanges": "[json(parameters('islandIpRanges'))]",
+        "ipUpdateCosmosDB": "[concat('CSC.ipUpdateCosmosDB', resourceGroup().location)]",
+        "ipUpdateCosmosDBScriptId": "[resourceId('Microsoft.Resources/deploymentScripts',variables('ipUpdateCosmosDB'))]",
+        "deploymentScriptsUpdateTag": "[guid(uniqueString('CSC.CosmosDB.IPUpdate', parameters('scaleUnit'), subscription().subscriptionId, '1'))]",
+        "deploymentScriptsCleanupPreference": "Always",
+        "copy": [
+            {
+                "name": "ipRules",
+                "count": "[length(variables('parsedIslandIpRanges').ipRanges)]",
+                "input": "[variables('parsedIslandIpRanges').ipRanges[copyIndex('ipRules')]]"
+            }
+        ],
+        "ipRulesString": "[join(variables('ipRules'), ',')]",
+        "vnetName": "[concat(parameters('vnet'),parameters('scaleUnit'))]",
+        "staticIpAddresses": [
+            "207.68.190.32/27",
+            "157.58.216.64/26",
+            "13.106.78.32/27",
+            "13.106.174.32/27",
+            "194.69.119.64/26",
+            "13.106.4.96/27",
+            "167.220.249.128/26",
+            "104.42.195.92"
+        ],
+        "staticIpAddressesString": "[join(variables('staticIpAddresses'), ',')]"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Resources/deploymentScripts",
+            "apiVersion": "2020-10-01",
+            "name": "[variables('ipUpdateCosmosDB')]",
+            "location": "[resourceGroup().location]",
+            "identity": {
+                "type": "UserAssigned",
+                "userAssignedIdentities": {
+                    "[variables('identityId')]": {}
+                }
+            },
+            "kind": "AzurePowerShell",
+            "properties": {
+                "forceUpdateTag": "[variables('deploymentScriptsUpdateTag')]",
+                "azPowerShellVersion": "8.3",
+                "timeout": "PT30M",
+                "arguments": "[
+                    concat(
+                      '-ResourceGroupName ', resourceGroup().name,' ',
+                      '-AccountName ',variables('cosmosdatabasename'),' ',
+                      '-NewIpRanges ', '\\\"' ,replace(variables('ipRulesString'), '\"', '\\\"'),'\\\"'
+                      )
+                      ]",
+            "scriptContent": "param(\r\n    [Parameter(Mandatory = $true)]\r\n    [string] $ResourceGroupName,\r\n\r\n    [Parameter(Mandatory = $true)]\r\n    [string] $AccountName,\r\n\r\n    [Parameter(Mandatory = $true)]\r\n    [string] $NewIpRanges\r\n)\r\n\r\n\r\n$NewIpRangesArray = $NewIpRanges -split \",\"\r\n\r\n# Retrieve all Cosmos DB accounts in the specified resource group\r\n$cosmosObjs = Get-AzCosmosDBAccount -ResourceGroupName $resourceGroupName\r\n\r\n# Check if the specific Cosmos DB account is present\r\n$accountExists = $cosmosObjs | Where-Object { $_.Name -eq $AccountName }\r\n\r\n\r\n# Output based on the existence of the account\r\nif ($accountExists) {\r\n    $cosmosObj = $accountExists;\r\n    # Check if IpRules is null or empty and initialize an empty array if true\r\n    if ($null -eq $cosmosObj.IpRules -or $cosmosObj.IpRules.Count -eq 0) {\r\n        $currentIpRangesArray = @()\r\n        Write-Output \"No existing IP rules found. Initializing with an empty array.\"\r\n    }\r\n    else {\r\n        # Retrieve the current IP rules and convert to an array of IP strings\r\n        $currentIpRangesArray = $cosmosObj.IpRules | Select-Object -ExpandProperty IPAddressOrRangeProperty\r\n    }\r\n\r\n    # Initialize a list to store all updated IP ranges\r\n    $updatedIpRangesArray = $currentIpRangesArray.Clone()\r\n    $changesMade = $false  # Flag to track if new IPs are added\r\n\r\n    # Loop through each new IP range and add it to the list if it is not already included\r\n    foreach ($newIpRange in $NewIpRangesArray) {\r\n        if (-not $updatedIpRangesArray.Contains($newIpRange)) {\r\n            $updatedIpRangesArray += $newIpRange\r\n            Write-Output \"Added IP range $newIpRange to update list\"\r\n            $changesMade = $true  # Set flag to true indicating a change was made\r\n        }\r\n        else {\r\n            Write-Output \"IP range $newIpRange already exists in Cosmos DB account $AccountName\"\r\n        }\r\n    }\r\n\r\n    # Check if changes were made and update the Cosmos DB account\r\n    if ($changesMade) {\r\n        # Update the Cosmos DB account with the new IP rules\r\n        $cosmosObj = Get-AzCosmosDBAccount -Name $AccountName -ResourceGroupName $ResourceGroupName\r\n        if ($cosmosObj.ProvisioningState -ne \"Updating\") {\r\n            Update-AzCosmosDBAccount -Name $AccountName -ResourceGroupName $ResourceGroupName -IpRule $updatedIpRangesArray\r\n            Write-Output \"Updated IP ranges for Cosmos DB account $AccountName\"\r\n        }\r\n        else {\r\n            Write-Output \"There is already an operation in progress which requires exclusive lock on this Cosmos: $AccountName . Please retry the operation after sometime\"\r\n        }\r\n    }\r\n    else {\r\n        Write-Output \"No new IP ranges added; no update necessary.\"\r\n    }\r\n}\r\nelse {\r\n\r\n    $updatedIpRangesArray = $NewIpRangesArray.Clone()\r\n}\r\n$ipObjectsArray = $updatedIpRangesArray | ForEach-Object {\r\n    # Create a custom object for each IP address\r\n    [PSCustomObject]@{\r\n        ipAddressOrRange = $_\r\n    }\r\n}\r\n\r\n\r\n$DeploymentScriptOutputs = @{}\r\n$DeploymentScriptOutputs['ipAddress'] = $ipObjectsArray",
+            "cleanupPreference": "[variables('deploymentScriptsCleanupPreference')]",
+            "retentionInterval": "P1D"
+            }
+        },
+]
+}
