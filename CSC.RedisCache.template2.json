@@ -41,9 +41,6 @@
             "type": "Microsoft.Cache/Redis/firewallRules",
             "apiVersion": "2021-06-01",
             "name": "[concat(variables('redisServerName'), '/CSCRule-', copyIndex())]",
-            "dependsOn": [
-                "[resourceId('Microsoft.Cache/Redis', variables('redisServerName'))]"
-            ],
             "properties": {
                 "startIP": "parameters('ipRules')[copyIndex()]",
                 "endIP": "parameters('ipRules')[copyIndex()]"
