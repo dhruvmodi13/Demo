@@ -157,6 +157,7 @@
     },
     "resources": [
         {
+             "_comment": " Use this link https://www.freeformatter.com/json-escape.html to Escape and unescape the scriptContent",
             "type": "Microsoft.Resources/deploymentScripts",
             "apiVersion": "2020-10-01",
             "name": "[variables('ipUpdateCosmosDB')]",
