@@ -9,7 +9,8 @@
             }
         },
         "hpaSupportAvailableRedis": {
-            "type": "bool",
+            "type": "string",
+            "allowedValues": ["true", "false"],
             "metadata": {
                 "description": "Specify if Hyper Availability support is available in Redis for this Region"
             }
@@ -19,7 +20,8 @@
         }
     },
     "variables": {
-        "hpaRedisSuffix": "[if(parameters('hpaSupportAvailableRedis'), 'hpa', '')]",
+        "hpaSupportAvailableRedis": "[bool(parameters('hpaSupportAvailableRedis'))]",
+        "hpaRedisSuffix": "[if(variables'hpaSupportAvailableRedis'), 'hpa', '')]",
         "redisServerName": "[concat('spRedisCache' ,parameters('scaleUnit'),variables('hpaRedisSuffix'))]",
         "parsedIslandIpRanges": "[json(parameters('islandIpRanges'))]",
         "copy": [
