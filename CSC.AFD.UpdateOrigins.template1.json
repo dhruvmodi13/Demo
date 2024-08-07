@@ -40,7 +40,7 @@
         }
     },
     "variables": {
-        "hasCommonRG": "[bool(parameters(hasCommonRG))]",
+        "hasCommonRG": "[bool(parameters('hasCommonRG'))]",
         "afd_Suffix": "[if(equals(variables('hasCommonRG'), true()), parameters('commonClass'), parameters('scaleUnit'))]",
         "service_Type": "[if(equals(parameters('webappPrefix'), 'salesproductivityservice'), 'core' , 'bot')]",
         "afd_ServiceTypePrefix": "[concat(variables('service_Type'))]",
