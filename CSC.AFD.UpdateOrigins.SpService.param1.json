@@ -3,22 +3,22 @@
     "contentVersion": "1.0.0.0",
     "parameters": {
         "scaleUnit": {
-            "value": "#scaleUnit#"
+            "value": "afdev2"
         },
         "webappPrefix": {
             "value": "salesproductivityservice"
         },
         "commonClass": {
-            "value": "#commonClass#"
+            "value": ""
         },
         "hasCommonRG": {
-            "value": "#hasCommonRG#"
+            "value": "false"
         },
         "cscDomainName": {
-            "value": "#serviceName#-#workloadNamespace#.#cs_regionShortName#-ia#cs_islandNumber#.gateway.#cs_env#.island.powerapps.com"
+            "value": "spservice-afdev2-copilotforsales.eus-ia100.gateway.test.island.powerapps.com"
         },
         "physicalClusterName": {
-            "value": "#cs_physicalClusterName#"
+            "value": "tstia102eus0"
         }
     }
 }
