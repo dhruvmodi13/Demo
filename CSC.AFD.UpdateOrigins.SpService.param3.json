@@ -8,6 +8,9 @@
         "webappPrefix": {
             "value": "salesproductivityservice"
         },
+        "migrateToCSC":{
+            "value": "false"
+        },
         "common_rgname": {
             "value": ""
         },
