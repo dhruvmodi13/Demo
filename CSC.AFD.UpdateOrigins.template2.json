@@ -1,0 +1,137 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "afd_NestedDeploymentName": {
+            "type": "string",
+            "defaultValue": "[concat('CSC-AFDOriginsUpdate', uniqueString(resourceGroup().id, utcNow()))]"
+        },
+        "scaleUnit": {
+            "type": "string",
+            "metadata": {
+                "description": "Describes the scale unit that is to be used to uniquely identify each resource"
+            }
+        },
+        "webappPrefix": {
+            "type": "string",
+            "metadata": {
+                "description": "Prefix for the Service being deployed- SP or BotService"
+            }
+        },
+        "common_rgname": {
+            "type": "string"
+        },
+        "commonClass": {
+            "type": "string",
+            "metadata": {
+                "description": "Common Class for the Env"
+            }
+        },
+        "hasCommonRG": {
+            "type": "string",
+            "metadata": {
+                "description": "A boolean if the current deployment has Common RG"
+            }
+        },
+        "cscDomainName": {
+            "type": "string",
+            "metadata": {
+                "description": "CSC Island URI formed using tokenization in parameters"
+            }
+        },
+        "physicalClusterName": {
+            "type": "string",
+            "metadata": {
+                "description": "AKS Physical Cluster Name."
+            }
+        }
+    },
+    "variables": {
+        "hasCommonRG": "[bool(parameters('hasCommonRG'))]",
+        "afd_Suffix": "[if(equals(variables('hasCommonRG'), true()), parameters('commonClass'), parameters('scaleUnit'))]",
+        "service_Type": "[if(equals(parameters('webappPrefix'), 'salesproductivityservice'), 'core' , 'bot')]",
+        "afd_ServiceTypePrefix": "[concat(variables('service_Type'))]",
+        "afd_ServiceTypeSuffix": "[concat(variables('service_Type'),variables('afd_Suffix'))]",
+        "afd_ProfileName": "[concat('salescopilot-afd',variables('afd_ServiceTypeSuffix'))]",
+        "afd_OriginGroupName": "[concat(parameters('scaleUnit'), 'OriginGroup', variables('afd_ServiceTypePrefix'))]",
+        "afd_OriginName": "[concat('CSC', parameters('physicalClusterName'),variables('afd_Suffix'))]",
+        "afd_OriginId": "[resourceId(variables('common_rgname'), 'Microsoft.Cdn/profiles/origingroups/origins', variables('afd_ProfileName'), variables('afd_OriginGroupName'), variables('afd_OriginName'))]",
+        "afd_CleanAppServiceOrigin": "[concat('CSC.Afd_CleanAppServiceOrigin', parameters('physicalClusterName'),variables('afd_Suffix'))]",
+        "identityName": "[concat('depUserIdentity', variables('afd_Suffix'))]",
+        "common_rgname": "[if(equals(parameters('common_rgname'), ''), resourceGroup().name, parameters('common_rgname'))]",
+        "identityId": "[resourceId(variables('common_rgname'), 'Microsoft.ManagedIdentity/userAssignedIdentities', variables('identityName'))]",
+        "deploymentScriptsUpdateTag": "[guid(uniqueString(variables('afd_CleanAppServiceOrigin')))]",
+        "afd_EndpointName": "[concat(parameters('scaleUnit'), 'EP', variables('afd_ServiceTypePrefix'))]"
+
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2021-04-01",
+            "name": "[parameters('afd_NestedDeploymentName')]",
+            "subscriptionId": "[subscription().subscriptionId]",
+            "resourceGroup": "[variables('common_rgname')]",
+            "properties": {
+              "mode": "Incremental",
+              "template": {
+                "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+                "contentVersion": "1.0.0.0",
+                "parameters": {},
+                "variables": {},
+                "resources": [
+                    {
+                        "type": "Microsoft.Cdn/profiles/origingroups/origins",
+                        "apiVersion": "2022-11-01-preview",
+                        "name": "[concat(variables('afd_ProfileName'), '/', variables('afd_OriginGroupName'), '/', variables('afd_OriginName'))]",
+                        "dependsOn": [],
+                        "properties": {
+                          "hostName": "[parameters('cscDomainName')]",
+                          "httpPort": 80,
+                          "httpsPort": 443,
+                          "originHostHeader": "[parameters('cscDomainName')]",
+                          "priority": 1,
+                          "weight": 1000,
+                          "enabledState": "Enabled",
+                          "enforceCertificateNameCheck": false
+                        }
+                    },
+                    {
+                        "type": "Microsoft.Resources/deploymentScripts",
+                        "apiVersion": "2020-10-01",
+                        "name": "[variables('afd_CleanAppServiceOrigin')]",
+                        "location": "[resourceGroup().location]",
+                        "dependsOn": [
+                            "[variables('afd_OriginId')]"
+                        ],
+                        "identity": {
+                            "type": "UserAssigned",
+                            "userAssignedIdentities": {
+                                "[variables('identityId')]": {}
+                            }
+                        },
+                        "kind": "AzurePowerShell",
+                        "properties": {
+                            "forceUpdateTag": "[variables('deploymentScriptsUpdateTag')]",
+                            "azPowerShellVersion": "8.3",
+                            "timeout": "PT30M",
+                            "arguments": "[
+                                concat(
+                                  '-resourceGroupName ', variables('common_rgname'),' ',
+                                  '-frontDoorName ',variables('afd_ProfileName'),' ',
+                                  '-originGroupName ',variables('afd_OriginGroupName'),' ',
+                                  '-endpointName ',variables('afd_EndpointName'),' '
+                                  )
+                                  ]",
+                        "scriptContent": "Param(\r\n    [string][Parameter(Mandatory = $true)] $resourceGroupName,\r\n    [string][Parameter(Mandatory = $true)] $frontDoorName,\r\n    [string][Parameter(Mandatory = $true)] $originGroupName,\r\n    [string][Parameter(Mandatory = $true)] $endpointName\r\n)\r\n\r\n# Fetching the list of CDN origins for the specified resource group, front door, and origin group\r\n$origins = Get-AzFrontDoorCdnOrigin -ResourceGroupName $resourceGroupName -ProfileName $frontDoorName -OriginGroupName $originGroupName\r\n\r\n# Checking if the default origin exists within the fetched origins\r\n$defaultOriginExists = $origins | Where-Object { $_.Name -eq 'default' }\r\n\r\nif ($defaultOriginExists)\r\n{\r\n    Write-Output \"Default origin exists. Initiating deletion process.\"\r\n    \r\n    # Attempting to remove the default origin\r\n    try\r\n    {\r\n        $defaultOriginExists | Remove-AzFrontDoorCdnOrigin\r\n        Write-Output \"Default origin successfully deleted.\"\r\n        \r\n        # Purging the Azure Front Door cache following the successful deletion of the origin\r\n        Clear-AzFrontDoorCdnEndpointContent -ResourceGroupName $resourceGroupName -ProfileName $frontDoorName -EndpointName $endpointName -ContentPath \/*\r\n        Write-Output \"AFD cache purge initiated for all content following origin deletion.\"\r\n    }\r\n    catch\r\n    {\r\n        Write-Error \"Failed to delete the default origin or purge the AFD cache. Error: $_\"\r\n    }\r\n}\r\nelse\r\n{\r\n    Write-Output \"No default origin exists. No action taken.\"\r\n}",
+                        "cleanupPreference": "Always",
+                        "retentionInterval": "P1D"
+                        }
+                    }
+                ]
+              }
+            }
+        }
+    ],
+    "outputs": {
+    }
+}
