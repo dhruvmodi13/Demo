@@ -9,7 +9,7 @@
             "value": "salesproductivityservice"
         },
         "migrateToCSC":{
-            "value": "false"
+            "value": "true"
         },
         "common_rgname": {
             "value": ""
