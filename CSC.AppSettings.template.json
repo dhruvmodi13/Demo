@@ -1,0 +1,101 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "scaleUnit": {
+            "type": "string",
+            "metadata": {
+                "description": "Describes the scale unit that is to be used to uniquely identify each resource"
+            }
+        },
+        "CNameDomainName": {
+            "type": "string",
+            "metadata": {
+                "description": "The Cname Domain Suffix used"
+            }
+        },
+        "env_type": {
+            "type": "string",
+            "metadata": {
+                "description": "Env Type Can be of Type - Dev, Test, PreProd, Prod"
+            }
+        },
+        "tenantLocationConfig": {
+            "type": "object",
+            "metadata": {
+                "description": "Tenant location configuration object"
+            }
+        }
+    },
+    "functions": [
+        {
+            "namespace": "C4SCodeDeployment",
+            "members": {
+                "getCustomDomainService": {
+                    "parameters": [
+                        {
+                            "name": "envType",
+                            "type": "string"
+                        },
+                        {
+                            "name": "sUnit",
+                            "type": "string"
+                        },
+                        {
+                            "name": "CNameDName",
+                            "type": "string"
+                        }
+                    ],
+                    "output": {
+                        "type": "string",
+                        "value": "[concat(parameters('sUnit'), if(equals(parameters('envType'), 'Prod'), '.', 'service.'), parameters('CNameDName'), '.dynamics.com')]"
+                    }
+                },
+                "getRegion": {
+                    "parameters": [
+                        {
+                            "name": "locations",
+                            "type": "array"
+                        },
+                        {
+                            "name": "index",
+                            "type": "int"
+                        }
+                    ],
+                    "output": {
+                        "type": "string",
+                        "value": "[if(contains(parameters('locations')[parameters('index')], 'region'), parameters('locations')[parameters('index')].region, '')]"
+                    }
+                }
+            }
+        }
+    ],
+    "variables": {
+        "allowedLocationCount": "[length(parameters('tenantLocationConfig').allowedLocations)]",
+        "copy": [
+            {
+                "name": "TenanLocationConfig_Array",
+                "count": "[variables('allowedLocationCount')]",
+                "input": {
+                    "BaseUrl": "[C4SCodeDeployment.getCustomDomainService(parameters('env_type'), parameters('tenantLocationConfig').allowedLocations[copyIndex('TenanLocationConfig_Array')].scaleUnit, parameters('CNameDomainName'))]",
+                    "region": "[if(equals(parameters('env_type'), 'Prod'), parameters('tenantLocationConfig').allowedLocations[copyIndex('TenanLocationConfig_Array')].scaleUnit, C4SCodeDeployment.getRegion(parameters('tenantLocationConfig').allowedLocations, copyIndex('TenanLocationConfig_Array')))]",
+                    "IsEURegion": "[parameters('tenantLocationConfig').allowedLocations[copyIndex('TenanLocationConfig_Array')].isEURegion]",
+                    "Location": "[parameters('tenantLocationConfig').allowedLocations[copyIndex('TenanLocationConfig_Array')].location]"
+                }
+            }
+        ]
+    },
+    "resources": [],
+    "outputs": {
+        "tenantLocationConfigOutput": {
+            "type": "object",
+            "value": {
+                "MsxUrl": "[C4SCodeDeployment.getCustomDomainService(parameters('env_type'), parameters('tenantLocationConfig').msx, parameters('CNameDomainName'))]",
+                "DogFoodUrl": "[C4SCodeDeployment.getCustomDomainService(parameters('env_type'), parameters('tenantLocationConfig').dogfood, parameters('CNameDomainName'))]",
+                "RestOfGeoDefaultUrl": "[C4SCodeDeployment.getCustomDomainService(parameters('env_type'), parameters('tenantLocationConfig').restOfGeo, parameters('CNameDomainName'))]",
+                "EuropeDefaultUrl": "[C4SCodeDeployment.getCustomDomainService(parameters('env_type'), parameters('tenantLocationConfig').europeDefault, parameters('CNameDomainName'))]",
+                "AllowedLocations": "[variables('TenanLocationConfig_Array')]"
+            }
+        }
+    }
+}
