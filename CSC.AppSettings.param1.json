@@ -1,0 +1,112 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "CNameDomainName": {
+            "value": "vivasales"
+        },
+        "env_type": {
+            "value": "Prod"
+        },
+        "tenantLocationConfig": {
+            "value": {
+                        "msx": "msx",
+                        "dogfood": "df",
+                        "restOfGeo": "nam",
+                        "europeDefault": "eur",
+                        "allowedLocations": [
+                            {
+                                "location": "europe",
+                                "scaleUnit": "eur",
+                                "isEURegion": true
+                            },
+                            {
+                                "location": "unitedkingdom",
+                                "scaleUnit": "gbr",
+                                "isEURegion": true
+                            },
+                            {
+                                "location": "germany",
+                                "scaleUnit": "deu",
+                                "isEURegion": true
+                            },
+                            {
+                                "location": "switzerland",
+                                "scaleUnit": "che",
+                                "isEURegion": true
+                            },
+                            {
+                                "location": "france",
+                                "scaleUnit": "fra",
+                                "isEURegion": true
+                            },
+                            {
+                                "location": "norway",
+                                "scaleUnit": "nor",
+                                "isEURegion": true
+                            },
+                            {
+                                "location": "unitedstates",
+                                "scaleUnit": "nam",
+                                "isEURegion": false
+                            },
+                            {
+                                "location": "asia",
+                                "scaleUnit": "asia",
+                                "isEURegion": false
+                            },
+                            {
+                                "location": "southamerica",
+                                "scaleUnit": "sam",
+                                "isEURegion": false
+                            },
+                            {
+                                "location": "india",
+                                "scaleUnit": "ind",
+                                "isEURegion": false
+                            },
+                            {
+                                "location": "japan",
+                                "scaleUnit": "jpn",
+                                "isEURegion": false
+                            },
+                            {
+                                "location": "southafrica",
+                                "scaleUnit": "zaf",
+                                "isEURegion": false
+                            },
+                            {
+                                "location": "unitedarabemirates",
+                                "scaleUnit": "uae",
+                                "isEURegion": false
+                            },
+                            {
+                                "location": "australia",
+                                "scaleUnit": "oce",
+                                "isEURegion": false
+                            },
+                            {
+                                "location": "canada",
+                                "scaleUnit": "can",
+                                "isEURegion": false
+                            },
+                            {
+                                "location": "korea",
+                                "scaleUnit": "kor",
+                                "isEURegion": false
+                            },
+                            {
+                                "location": "unitedstates",
+                                "scaleUnit": "msx",
+                                "isEURegion": false
+                            },
+                            {
+                                "location": "unitedstates",
+                                "scaleUnit": "df",
+                                "isEURegion": false
+                            }
+                        ]
+                    }
+        }
+    }
+}
