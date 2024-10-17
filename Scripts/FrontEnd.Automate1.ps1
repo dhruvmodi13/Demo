@@ -13,7 +13,7 @@ Param(
 $indexDocument = "somehtml.html"
 
 Write-Output "Enabling Static website for $storageAccount_name"
-$context = (Get-AzStorageAccount -ResourceGroupName $resourceGroupName -Name $storageAccount_name).Context
+$context = New-AzStorageContext -StorageAccountName -Name $storageAccount_name -UseConnectedAccount
 Enable-AzStorageStaticWebsite -Context $context -IndexDocument $indexDocument
 Write-Output "Enabled Static website for $storageAccount_name"
 
