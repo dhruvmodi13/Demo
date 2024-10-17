@@ -1,0 +1,51 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "scaleUnit": {
+            "type": "string",
+            "metadata": {
+                "description": "Describes the scale unit that is to be used to uniquely identify each resource"
+            }
+        }
+    },
+    "variables": {
+        "location": "[resourceGroup().location]",
+        "identityName": "[concat('depUserIdentity', parameters('scaleUnit'))]",
+        "rolesArrayObject": [
+            {
+                "roleName": "kvAdmin",
+                "roleId": "00482a5a-887f-4fb3-b363-3b7fe8e74483"
+            },
+            {
+                "roleName": "kvContributer",
+                "roleId": "f25e0fa2-a7c8-4377-a976-54943a77a395"
+            }
+        ]
+    },
+    "resources": [
+        {
+            "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+            "apiVersion": "2018-11-30",
+            "name": "[variables('identityName')]",
+            "location": "[variables('location')]"
+        },
+        {
+            "copy": {
+                "name": "rolesAssignments",
+                "count": "[length(variables('rolesArrayObject'))]"
+            },
+            "type": "Microsoft.Authorization/roleAssignments",
+            "apiVersion": "2022-04-01",
+            "name": "[guid(uniqueString(variables('identityName'),variables('rolesArrayObject')[copyIndex()].roleName ,subscription().subscriptionId))]",
+            "properties": {
+                "roleDefinitionId": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', variables('rolesArrayObject')[copyIndex()].roleId)]",
+                "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('identityName')), '2018-11-30').principalId]",
+                "principalType": "ServicePrincipal"
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('identityName'))]"
+            ]
+        }
+    ]
+}
